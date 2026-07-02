@@ -183,10 +183,9 @@ def main() -> int:
         fd.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         fd.setFileMode(QFileDialog.FileMode.AnyFile)
         fd.setLabelText(QFileDialog.DialogLabel.FileName, tr("Chart name:"))
-        try:
-            fd.selectFile(dlg._suggest_chart_name())
-        except Exception:
-            pass
+        # Plain app-branded default instead of the layout-derived name
+        # (ColorMunki-A4-495p-…) — the user names the chart, not the geometry.
+        fd.selectFile("chromiq-patches-chart")
         if fd.exec() != QFileDialog.DialogCode.Accepted or not fd.selectedFiles():
             return None
         chosen = _P(fd.selectedFiles()[0])
@@ -252,6 +251,7 @@ def main() -> int:
         reapply_groupbox_surface(dlg)
         reapply_input_stylesheet(dlg)
         _style_credit()
+        _refresh_gear_icon()
 
     def _open_settings() -> None:
         """Minimal standalone preferences: language, appearance and the
@@ -348,13 +348,44 @@ def main() -> int:
             _apply_dialog_theme(new_mode)
 
     gear = QToolButton(dlg)
-    gear_icon = resource_path("assets/settings_v2.png")
-    if gear_icon.exists():
-        gear.setIcon(QIcon(QPixmap(str(gear_icon))))
-        gear.setIconSize(QSize(22, 22))
-    else:
-        gear.setText("⚙")
-    gear.setFixedSize(30, 30)
+
+    def _sliders_icon(size: int = 28) -> QIcon:
+        """ChromIQ's settings glyph (three sliders, brand-coloured knobs),
+        drawn programmatically like the masthead's light-mode fallback — the
+        shipped settings_v2.png has white tracks tuned for the dark masthead
+        and all but disappears on a light background. Track colour is
+        theme-aware so the icon reads clearly in both modes."""
+        from PyQt6.QtGui import QGuiApplication, QPainter, QPen, QColor
+        dark = resolve_mode(settings.get("appearance", "auto")) == "dark"
+        track_color = "#b0b0b0" if dark else "#6a6a6a"
+        dpr = QGuiApplication.primaryScreen().devicePixelRatio()
+        phys = round(size * dpr)
+        px = QPixmap(phys, phys)
+        px.fill(Qt.GlobalColor.transparent)
+        p = QPainter(px)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        track_cols = ["#ff4573", "#37bcd6", "#ffb42d"]
+        knob_x = [0.65, 0.30, 0.50]
+        for i, (col, kx) in enumerate(zip(track_cols, knob_x)):
+            y = int(phys * (0.28 + i * 0.22))
+            p.setPen(QPen(QColor(track_color), max(1, int(phys * 0.07)),
+                          Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            p.drawLine(int(phys * 0.12), y, int(phys * 0.88), y)
+            hx = int(phys * kx)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(col))
+            r = max(2, int(phys * 0.13))
+            p.drawEllipse(hx - r, y - r, r * 2, r * 2)
+        p.end()
+        px.setDevicePixelRatio(dpr)
+        return QIcon(px)
+
+    def _refresh_gear_icon() -> None:
+        gear.setIcon(_sliders_icon())
+        gear.setIconSize(QSize(28, 28))
+
+    _refresh_gear_icon()
+    gear.setFixedSize(36, 36)
     gear.setAutoRaise(True)
     gear.setToolTip(tr("Preferences — language, appearance and ArgyllCMS location"))
     gear.setCursor(Qt.CursorShape.PointingHandCursor)
