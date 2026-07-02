@@ -674,8 +674,8 @@ def main() -> int:
     # after the override.
     import core.updater as _updater
     _updater._RELEASES_API = ("https://api.github.com/repos/itsab1989/"
-                              "chromiq-patches/releases?per_page=30")
-    _updater._RELEASES_PAGE = "https://github.com/itsab1989/chromiq-patches/releases"
+                              "ChromIQ-Patches/releases?per_page=30")
+    _updater._RELEASES_PAGE = "https://github.com/itsab1989/ChromIQ-Patches/releases"
 
     _update_checker: list = []   # keep a ref so the QObject isn't collected
 

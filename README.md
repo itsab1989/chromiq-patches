@@ -6,7 +6,7 @@
 
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-1.0.1-7c5cff">
-  <img alt="Downloads" src="https://img.shields.io/endpoint?url=https://itsab1989.github.io/github-traffic-downloads-dashboard/assets/badges/itsab1989_chromiq-patches-downloads.json">
+  <img alt="Downloads" src="https://img.shields.io/endpoint?url=https://itsab1989.github.io/github-traffic-downloads-dashboard/assets/badges/itsab1989_ChromIQ-Patches-downloads.json">
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-2a9d8f">
   <img alt="License" src="https://img.shields.io/badge/license-GPLv3-blue">
 </p>
@@ -66,12 +66,12 @@ two share presets: a chart designed here shows up in ChromIQ and vice versa.
 ## Install
 
 Grab the build for your OS from the
-[releases page](https://github.com/itsab1989/chromiq-patches/releases), or run
+[releases page](https://github.com/itsab1989/ChromIQ-Patches/releases), or run
 from source:
 
 ```bash
-git clone https://github.com/itsab1989/chromiq-patches.git
-cd chromiq-patches
+git clone https://github.com/itsab1989/ChromIQ-Patches.git
+cd ChromIQ-Patches
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python main.py
