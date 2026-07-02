@@ -137,6 +137,20 @@ def main() -> int:
     set_language(settings.get("language", "en"))
     install_qt_translator(app)
 
+    # Standalone catalog overlay: the vendored data/i18n/ is overwritten on
+    # every sync_from_chromiq.py run, so translations for the strings that
+    # exist only in this app live in repo-owned data/i18n_standalone/ and are
+    # merged into the loaded catalog here.
+    import json as _json
+    import core.i18n as _i18n
+    _code = settings.get("language", "en")
+    _overlay = resource_path(f"data/i18n_standalone/{_code}.json")
+    if _code != "en" and _overlay.is_file():
+        try:
+            _i18n._catalog.update(_json.loads(_overlay.read_text(encoding="utf-8")))
+        except Exception:
+            log.warning("standalone i18n overlay failed to load", exc_info=True)
+
     appearance = settings.get("appearance", "auto")
     apply_appearance(app, None, appearance)
 
@@ -166,7 +180,7 @@ def main() -> int:
          "this layout — or Save As to export the full chart to a folder you "
          "pick, without leaving the editor."):
             ("Save the chart to a folder you pick — the print-ready TIFF "
-             "pages plus the .ti1/.ti2 and i1Profiler export files."),
+             "pages plus the .ti1 patch set and the i1Profiler export files."),
         ("Close the editor without saving. If the layout has unsaved "
          "changes you'll be asked to confirm first; “Apply / Save…” "
          "keeps your work."):
@@ -443,8 +457,8 @@ def main() -> int:
     from ui.tooltip_button import TooltipButton
     for _tip in dlg.findChildren(TooltipButton):
         if getattr(_tip, "_title", "") == "Chart patch set editor":
-            _tip._title = "ChromIQ Patches — chart patch set editor"
-            _tip._body = (
+            _tip._title = _tr("ChromIQ Patches — chart patch set editor")
+            _tip._body = _tr(
                 "Welcome to ChromIQ Patches! This is where you build the PATCH "
                 "SET for your chart — the collection of little colour squares "
                 "(we call each one a \"patch\") that will be measured. You "

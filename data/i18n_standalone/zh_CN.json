@@ -1,0 +1,17 @@
+{
+ "1 page TIFF": "1 页 TIFF",
+ "Appearance:": "外观:",
+ "ArgyllCMS folder:": "ArgyllCMS 文件夹:",
+ "Auto (follow system)": "自动(跟随系统)",
+ "ChromIQ Patches — chart patch set editor": "ChromIQ Patches — 图卡色块集编辑器",
+ "Close the editor without saving. If the layout has unsaved changes you'll be asked to confirm first; “Save / Export…” keeps your work.": "不保存直接关闭编辑器。如有未保存的更改会先询问确认;“保存 / 导出…”可保留你的工作。",
+ "If you close now they'll be lost. Use “Save / Export…” first to keep them.": "现在关闭将丢失这些更改。请先使用“保存 / 导出…”保留它们。",
+ "Language changes apply after a restart.": "语言更改将在重启后生效。",
+ "Optional — only needed for the targen option when creating a new chart or adding patches.": "可选 — 仅在新建图卡或添加色块时使用 targen 选项才需要。",
+ "Preferences — language, appearance and ArgyllCMS location": "偏好设置 — 语言、外观与 ArgyllCMS 位置",
+ "Save / Export…": "保存 / 导出…",
+ "Save the chart to a folder you pick — the print-ready TIFF pages plus the .ti1 patch set and the i1Profiler export files.": "将图卡保存到你选择的文件夹 — 可直接打印的 TIFF 页面、.ti1 色块集,以及 i1Profiler 导出文件。",
+ "Saved {name} ({pages} + patch files) to {folder}": "已将 {name}({pages} + 色块文件)保存到 {folder}",
+ "Welcome to ChromIQ Patches! This is where you build the PATCH SET for your chart — the collection of little colour squares (we call each one a \"patch\") that will be measured. You choose which colours are in the set, what order they're in, and you can recolour, add or remove them.\n\nThe page layout is handled for you: when you save, ChromIQ Patches lays the set out with its built-in chart engine — no other software is needed.\n\nDon't worry — you can't break anything here. Nothing is printed or measured until you choose to.\n\nTwo areas to know about:\n\n• The patch grid fills most of the window: every colour is a small square. This is your workbench — drag squares around to reorder them, click to select, and recolour or add and remove patches. Use the controls above the grid to show or hide the patch numbers and the gaps between swatches.\n\n• The controls on the right let you add or remove patches, generate whole colour sets, recolour a selection, and save.\n\nA typical session goes: start a new patch set (or load one), arrange and recolour the patches, then Save / Export… — you get print-ready TIFF pages, the .ti1 patch set, a colour list, and files you can import straight into i1Profiler.": "欢迎使用 ChromIQ Patches!在这里构建图卡的「色块集」— 即将被测量的小色块的集合(每个小方块称为一个“色块”)。你决定色块集中包含哪些颜色、顺序如何,还可以改色、添加或删除。\n\n页面排版交给我们:保存时,ChromIQ Patches 会用内置图卡引擎自动排版 — 无需任何其他软件。\n\n请放心 — 在这里不会弄坏任何东西。在你决定之前,不会打印或测量任何内容。\n\n需要了解的两个区域:\n\n• 色块网格占据窗口的大部分:每种颜色都是一个小方块。这是你的工作台 — 拖动方块调整顺序,点击选择,可以改色、添加或删除色块。网格上方的控件可显示或隐藏编号和间距。\n\n• 右侧控件用于添加或删除色块、批量生成颜色集、为所选改色以及保存。\n\n典型流程:新建一个色块集(或载入现有的),整理并调整颜色,然后“保存 / 导出…”— 你将得到可打印的 TIFF 页面、.ti1 色块集、颜色列表,以及可直接导入 i1Profiler 的文件。",
+ "{n} page TIFFs": "{n} 页 TIFF"
+}

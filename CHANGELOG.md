@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.1
+
+- ChromIQ Patches branding throughout: masthead wordmark (with the ChromIQ
+  "IQ" treatment), window title, and a standalone welcome tooltip.
+- All standalone strings are now translated in every supported language
+  (12 languages) via a repo-owned catalog overlay.
+- Update popup, preferences (language / appearance / ArgyllCMS location with
+  auto-detect), version number in the footer.
+- README: screenshot added; export description corrected (no .cht/.ti2).
+
 ## v1.0.0
 
 - First release of ChromIQ Patches — ChromIQ's chart-design tool as a
