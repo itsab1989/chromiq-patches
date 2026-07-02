@@ -177,7 +177,10 @@ def main() -> int:
 
     def _tr_standalone(text: str) -> str:
         hit = _REWORDS.get(text)
-        return hit if hit is not None else _orig_tr(text)
+        # The reworded English is itself a tr() key: once the language
+        # catalogs carry translations for the standalone strings, they show
+        # up here automatically instead of pinning these lines to English.
+        return _orig_tr(hit) if hit is not None else _orig_tr(text)
 
     _editor_mod.tr = _tr_standalone
 
