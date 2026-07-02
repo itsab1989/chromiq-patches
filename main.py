@@ -183,13 +183,13 @@ def main() -> int:
 
     credit = QLabel(
         "Based on an original idea by Knut Georg Larsson — "
-        "developed together with itsab1989", dlg)
+        "developed together with Sebastian Reiprich", dlg)
     credit.setAlignment(Qt.AlignmentFlag.AlignHCenter)
     credit.setToolTip(
         "ChromIQ Patches grew out of Knut Georg Larsson's idea for a patch "
         "generator that doesn't depend on ArgyllCMS targen. Knut and "
-        "itsab1989 designed it together; itsab1989 wrote the code with "
-        "Claude. The chart engine is shared with ChromIQ "
+        "Sebastian Reiprich designed it together; Sebastian wrote the code "
+        "with Claude. The chart engine is shared with ChromIQ "
         "(github.com/itsab1989/ChromIQ).")
 
     def _style_credit() -> None:

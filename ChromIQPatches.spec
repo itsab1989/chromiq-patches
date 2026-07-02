@@ -69,11 +69,11 @@ if sys.platform == 'win32':
   ),
   kids=[
     StringFileInfo([StringTable('040904B0', [
-      StringStruct('CompanyName', 'itsab1989'),
+      StringStruct('CompanyName', 'Sebastian Reiprich'),
       StringStruct('FileDescription', 'ChromIQ Patches - printer test chart designer'),
       StringStruct('FileVersion', '{_APP_VERSION}'),
       StringStruct('InternalName', 'ChromIQPatches'),
-      StringStruct('LegalCopyright', 'Copyright (c) itsab1989 - GPL-3.0'),
+      StringStruct('LegalCopyright', 'Copyright (c) Sebastian Reiprich - GPL-3.0'),
       StringStruct('OriginalFilename', 'ChromIQPatches.exe'),
       StringStruct('ProductName', 'ChromIQ Patches'),
       StringStruct('ProductVersion', '{_APP_VERSION}')])]),

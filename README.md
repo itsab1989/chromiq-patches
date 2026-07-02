@@ -19,9 +19,9 @@ the page with a live preview, and export the result for
 workflow (`.ti1`/`.ti2` + print-ready TIFF pages + `.cht`).
 
 It grew out of **Knut Georg Larsson's** idea for a patch generator that
-doesn't depend on ArgyllCMS `targen`. Knut and itsab1989 developed the
-designer together inside ChromIQ; this repo cuts it loose for everyone who
-wants the charts without the full profiling suite.
+doesn't depend on ArgyllCMS `targen`. Knut and Sebastian Reiprich developed
+the designer together inside ChromIQ; this repo cuts it loose for everyone
+who wants the charts without the full profiling suite.
 
 <p align="center">
   <a href="https://ko-fi.com/itsab1989"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support ChromIQ on Ko-fi" height="36"></a>
@@ -80,8 +80,9 @@ topics belong to [ChromIQ](https://github.com/itsab1989/ChromIQ/issues).
 ## Credits
 
 - **Knut Georg Larsson** — the original idea and the chart-design concept,
-  developed jointly with itsab1989.
-- **itsab1989** — code (written with Claude), as part of ChromIQ.
+  developed jointly with Sebastian Reiprich.
+- **Sebastian Reiprich** ([itsab1989](https://github.com/itsab1989)) — code
+  (written with Claude), as part of ChromIQ.
 - **Pharmacist** — the bundled "by Pharmacist" chart targets.
 - [ArgyllCMS](https://www.argyllcms.com/) by Graeme Gill defined the `.ti1`/
   `.ti2`/`.cht` formats this app reads and writes (the app itself does not
