@@ -11,6 +11,10 @@
   <img alt="License" src="https://img.shields.io/badge/license-GPLv3-blue">
 </p>
 
+<p align="center">
+  <img src="docs/screenshot-editor.png" alt="ChromIQ Patches — the patch-set editor with the New patch set window and its live 3D RGB-cube preview" width="900">
+</p>
+
 ChromIQ Patches is the chart-design tool from
 [**ChromIQ**](https://github.com/itsab1989/ChromIQ) as a standalone desktop
 app: build a set of colour patches with combinable generators, lay them out on
