@@ -149,6 +149,38 @@ def main() -> int:
     # the built-in layout engine, so Argyll is an optional dependency here.
     runner = ArgyllRunner(settings)
 
+    # Standalone wording overrides, applied at tr() lookup time so the
+    # vendored editor stays byte-identical: everywhere the editor teaches
+    # ChromIQ's button names ("Save & apply…", "Apply / Save…", the Create
+    # Chart tab), the standalone says "Save / Export…" instead. Keyed by the
+    # EXACT source string; anything else falls through to the normal catalog.
+    # Installed before the dialog is built — tooltips resolve at construction.
+    import ui.dialogs.ti2_relayout_dialog as _editor_mod
+    _orig_tr = _editor_mod.tr
+    _REWORDS = {
+        ("If you close now they'll be lost. Use “Save As…” or "
+         "“Save & apply…” first to keep them."):
+            ("If you close now they'll be lost. Use “Save / Export…” "
+             "first to keep them."),
+        ("Overwrite the chart currently loaded in the Create Chart tab with "
+         "this layout — or Save As to export the full chart to a folder you "
+         "pick, without leaving the editor."):
+            ("Save the chart to a folder you pick — the print-ready TIFF "
+             "pages plus the .ti1/.ti2 and i1Profiler export files."),
+        ("Close the editor without saving. If the layout has unsaved "
+         "changes you'll be asked to confirm first; “Apply / Save…” "
+         "keeps your work."):
+            ("Close the editor without saving. If the layout has unsaved "
+             "changes you'll be asked to confirm first; “Save / Export…” "
+             "keeps your work."),
+    }
+
+    def _tr_standalone(text: str) -> str:
+        hit = _REWORDS.get(text)
+        return hit if hit is not None else _orig_tr(text)
+
+    _editor_mod.tr = _tr_standalone
+
     dlg = Ti2RelayoutDialog(runner, settings)
     apply_appearance(app, dlg, settings.get("appearance", "auto"))
 

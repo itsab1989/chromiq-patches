@@ -70,6 +70,24 @@ def main() -> int:
         assert txt is not None and txt.is_file(), "no .txt for an RGB chart"
         print(f"i1Profiler export OK — {txt.name}, {pxf.name}")
 
+    # 5. The editor's own save flow (Save / Export…) — loads a bundled chart
+    # and writes the full deliverable. Catches missing lazily-imported
+    # modules (core.file_manager was found this way).
+    ti2 = resource_path("assets/charts/pharmacist/rgb/i1pro/a4/tc924/tc924.ti2")
+    assert ti2.is_file(), f"missing bundled .ti2: {ti2}"
+    dlg2 = Ti2RelayoutDialog(runner, settings, initial_chart=ti2)
+    app.processEvents()
+    assert dlg2._grid.count() > 0, "editor did not load the bundled chart"
+    with tempfile.TemporaryDirectory() as td:
+        target = Path(td) / "smoke-save"
+        dlg2._write_chart_into(target, "smoke-save")
+        for suffix in (".ti2", "-i1profiler.pxf", "_01.tif"):
+            assert (target / f"smoke-save{suffix}").is_file(), \
+                f"save flow did not write smoke-save{suffix}"
+    print(f"save flow OK — chart with {dlg2._grid.count()} patches "
+          "written with exports")
+    dlg2.deleteLater()
+
     dlg.deleteLater()
     app.processEvents()
     print("smoke test PASSED")

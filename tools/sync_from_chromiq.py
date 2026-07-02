@@ -41,6 +41,7 @@ MODULES = [
     "core/__init__.py",
     "core/argyll_detect.py",
     "core/argyll_runner.py",
+    "core/file_manager.py",
     "core/i18n.py",
     "core/logger.py",
     "core/platform_paths.py",
