@@ -191,57 +191,24 @@ jobs:
 
       - name: Create DMG
         run: |
-          # Two-step approach — avoids hdiutil create -srcfolder hanging on
-          # GitHub Actions runners with large app bundles.
-          APP_MB=$(du -sm dist/ChromIQPatches.app | awk '{print $1}')
-          IMG_MB=$((APP_MB + 200))
-
-          hdiutil create -megabytes "$IMG_MB" \
-            -volname "ChromIQ Patches" -fs HFS+ /tmp/rw.dmg
-
-          MOUNT=$(hdiutil attach /tmp/rw.dmg -nobrowse -noautoopen \
-            | awk '/Apple_HFS/{print $NF}')
-
-          ditto dist/ChromIQPatches.app "$MOUNT/ChromIQPatches.app"
-          ln -sf /Applications "$MOUNT/Applications"
-          sync
-
-          # Detach gently first (force can wedge the DiskImages daemon and
-          # leave the device "busy" forever — both legs of v1.0.0-beta.1 died
-          # that way), escalate to -force only later, and wait until hdiutil
-          # actually stops listing the image before converting.
-          for i in $(seq 1 12); do
-            if [ "$i" -le 4 ]; then
-              hdiutil detach "$MOUNT" 2>/dev/null && break
-            else
-              hdiutil detach "$MOUNT" -force 2>/dev/null && break
-            fi
-            if ! hdiutil info | grep -q "$MOUNT"; then
-              echo "volume already detached"
-              break
-            fi
-            echo "detach attempt $i failed (volume busy); retrying in 5s…"
-            sleep 5
-          done
-          for i in $(seq 1 12); do
-            hdiutil info | grep -q "/tmp/rw.dmg" || break
-            echo "waiting for DiskImages to release /tmp/rw.dmg…"
-            sleep 5
-          done
-
-          for i in $(seq 1 5); do
-            rm -f "${{ matrix.artifact }}"
-            if hdiutil convert /tmp/rw.dmg \
-                 -format UDZO -imagekey zlib-level=9 \
-                 -o "${{ matrix.artifact }}"; then
-              break
-            fi
-            echo "convert attempt $i failed; retrying in 10s…"
-            sleep 10
-          done
-          [ -f "${{ matrix.artifact }}" ] || { echo "DMG convert failed"; exit 1; }
-
-          rm -f /tmp/rw.dmg
+          # Mount-free DMG creation. The attach → ditto → detach → convert
+          # pattern is unusable on current macos-14 runners: the mounted
+          # volume never releases (Spotlight/XProtect pin it; v1.0.0-beta.1
+          # and v1.0.0 both burned every retry on "Resource busy").
+          # makehybrid builds the filesystem image directly from a staging
+          # folder — no volume is ever attached, nothing can hold it.
+          STAGING=/tmp/dmg_staging
+          rm -rf "$STAGING"
+          mkdir "$STAGING"
+          ditto dist/ChromIQPatches.app "$STAGING/ChromIQPatches.app"
+          ln -s /Applications "$STAGING/Applications"
+          hdiutil makehybrid -hfs -hfs-volume-name "ChromIQ Patches" \
+            -o /tmp/hybrid.dmg "$STAGING"
+          rm -f "${{ matrix.artifact }}"
+          hdiutil convert /tmp/hybrid.dmg -format UDZO -imagekey zlib-level=9 \
+            -o "${{ matrix.artifact }}"
+          rm -f /tmp/hybrid.dmg
+          ls -lh "${{ matrix.artifact }}"
 
       - name: Codesign DMG (ad-hoc)
         run: codesign --sign - "${{ matrix.artifact }}"
@@ -301,45 +268,22 @@ jobs:
       - name: Create x86_64 DMG
         if: matrix.arch == 'universal2'
         run: |
+          # Same mount-free makehybrid approach as the main DMG above.
           THIN_APP=dist/ChromIQPatches-x86_64.app
           X86_DMG=ChromIQPatches-macOS-x86_64.dmg
-          APP_MB=$(du -sm "$THIN_APP" | awk '{print $1}')
-          IMG_MB=$((APP_MB + 40))
-          hdiutil create -megabytes "$IMG_MB" \
-            -volname "ChromIQ Patches" -fs HFS+ /tmp/rw_x86.dmg
-          MOUNT=$(hdiutil attach /tmp/rw_x86.dmg -nobrowse -noautoopen \
-            | awk '/Apple_HFS/{print $NF}')
-          ditto "$THIN_APP" "$MOUNT/ChromIQPatches.app"
-          ln -sf /Applications "$MOUNT/Applications"
-          sync
-          # Same gentle-then-force detach + release-wait as the main DMG above.
-          for i in $(seq 1 12); do
-            if [ "$i" -le 4 ]; then
-              hdiutil detach "$MOUNT" 2>/dev/null && break
-            else
-              hdiutil detach "$MOUNT" -force 2>/dev/null && break
-            fi
-            hdiutil info | grep -q "$MOUNT" || { echo "already detached"; break; }
-            echo "detach attempt $i failed; retrying in 5s…"; sleep 5
-          done
-          for i in $(seq 1 12); do
-            hdiutil info | grep -q "/tmp/rw_x86.dmg" || break
-            echo "waiting for DiskImages to release /tmp/rw_x86.dmg…"
-            sleep 5
-          done
-          for i in $(seq 1 5); do
-            rm -f "$X86_DMG"
-            if hdiutil convert /tmp/rw_x86.dmg \
-                 -format UDZO -imagekey zlib-level=9 \
-                 -o "$X86_DMG"; then
-              break
-            fi
-            echo "x86_64 convert attempt $i failed; retrying in 10s…"
-            sleep 10
-          done
-          [ -f "$X86_DMG" ] || { echo "x86_64 DMG convert failed"; exit 1; }
-          rm -f /tmp/rw_x86.dmg
+          STAGING=/tmp/dmg_staging_x86
+          rm -rf "$STAGING"
+          mkdir "$STAGING"
+          ditto "$THIN_APP" "$STAGING/ChromIQPatches.app"
+          ln -s /Applications "$STAGING/Applications"
+          hdiutil makehybrid -hfs -hfs-volume-name "ChromIQ Patches" \
+            -o /tmp/hybrid_x86.dmg "$STAGING"
+          rm -f "$X86_DMG"
+          hdiutil convert /tmp/hybrid_x86.dmg -format UDZO -imagekey zlib-level=9 \
+            -o "$X86_DMG"
+          rm -f /tmp/hybrid_x86.dmg
           codesign --sign - "$X86_DMG"
+          ls -lh "$X86_DMG"
 
       - name: Create GitHub Release (if not exists)
         env:
