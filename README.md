@@ -51,6 +51,10 @@ who wants the charts without the full profiling suite.
 - **Built-in presets** — the curated chart line-up from ChromIQ (Knut's
   full-layout setups and the "by Pharmacist" targets) ships in the box.
 
+<p align="center">
+  <img src="docs/screenshot-3d-distribution.png" alt="ChromIQ Patches — the 3D patch-distribution view: a 2927-patch set rendered as an interactive RGB cube with gamut-fill and spacing statistics" width="900">
+</p>
+
 ## What it deliberately isn't
 
 Printing, measuring and profile building stay in
