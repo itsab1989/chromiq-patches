@@ -2,12 +2,15 @@
 
 ## v1.1.0
 
-- The "Seed from targen" option is removed from the New chart window — the
-  colour-set generators cover the same ground without needing ArgyllCMS.
+- The "Seed from targen" and "Blank canvas" options are removed from the
+  New chart window — the colour-set generators cover the same ground
+  (targen was also the only feature that needed ArgyllCMS).
 - Preferences: the ArgyllCMS location section is gone; with targen removed,
   the app never runs an Argyll binary, so nothing needs the path any more.
-- The New-chart help text no longer describes the removed targen mode
+- The New-chart help text no longer describes the removed modes
   (in all 12 languages).
+- Unchecked radio buttons are visible in dark mode again (their ring used a
+  palette colour that vanished on the dark background).
 
 ## v1.0.1
 

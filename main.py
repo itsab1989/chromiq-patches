@@ -184,18 +184,30 @@ def main() -> int:
     }
 
     # The New-chart ⓘ help documents the (here removed) "Seed from targen"
-    # source mode. The help is one huge catalog key, so instead of rewording
-    # the key, edit the TRANSLATED text: every language keeps the targen
-    # bullet on its own "– … targen …" line, and the "four ways" count is a
-    # one-word swap per language (each pair only ever matches its own text).
+    # and "Blank canvas" source modes. The help is one huge catalog key, so
+    # instead of rewording the key, edit the TRANSLATED text: every language
+    # keeps each mode on its own "    – …" bullet line (targen carries the
+    # word "targen" verbatim; Blank canvas is the first bullet in all 12
+    # catalogs), and the ways-count is a one-word swap per language (each
+    # pair only ever matches its own text). ChromIQ itself dropped Blank
+    # canvas upstream, so a future vendor sync brings a source with three
+    # ways and no blank bullet — both the "Blank canvas" guard and the
+    # three-ways pairs below keep this correct on either side of that sync.
     _WAYS_COUNT = (
-        ("four ways", "three ways"), ("vier Wege", "drei Wege"),
-        ("cuatro formas", "tres formas"), ("quatre méthodes", "trois méthodes"),
-        ("quattro modi", "tre modi"), ("4 つの方法", "3 つの方法"),
-        ("vier manieren", "drie manieren"), ("fire måter", "tre måter"),
-        ("cztery sposoby", "trzy sposoby"), ("quatro formas", "três formas"),
-        ("четыре способа", "три способа"), ("fyra sätt", "tre sätt"),
-        ("四种方式", "三种方式"),
+        ("four ways", "two ways"), ("three ways", "two ways"),
+        ("vier Wege", "zwei Wege"), ("drei Wege", "zwei Wege"),
+        ("cuatro formas", "dos formas"), ("tres formas", "dos formas"),
+        ("quatre méthodes", "deux méthodes"),
+        ("trois méthodes", "deux méthodes"),
+        ("quattro modi", "due modi"), ("tre modi", "due modi"),
+        ("4 つの方法", "2 つの方法"), ("3 つの方法", "2 つの方法"),
+        ("vier manieren", "twee manieren"), ("drie manieren", "twee manieren"),
+        ("fire måter", "to måter"), ("tre måter", "to måter"),
+        ("cztery sposoby", "dwa sposoby"), ("trzy sposoby", "dwa sposoby"),
+        ("quatro formas", "duas formas"), ("três formas", "duas formas"),
+        ("четыре способа", "два способа"), ("три способа", "два способа"),
+        ("fyra sätt", "två sätt"), ("tre sätt", "två sätt"),
+        ("四种方式", "两种方式"), ("三种方式", "两种方式"),
     )
 
     def _tr_standalone(text: str) -> str:
@@ -205,11 +217,19 @@ def main() -> int:
         # up here automatically instead of pinning these lines to English.
         out = _orig_tr(hit) if hit is not None else _orig_tr(text)
         if "Seed from targen — enter a number" in text:
-            out = "\n".join(
-                line for line in out.split("\n")
-                if not ("targen" in line and line.lstrip().startswith("–")))
-            for four, three in _WAYS_COUNT:
-                out = out.replace(four, three)
+            drop_blank = "Blank canvas" in text   # pre-sync source only
+            kept = []
+            for line in out.split("\n"):
+                if line.lstrip().startswith("–"):
+                    if "targen" in line:
+                        continue
+                    if drop_blank:   # Blank canvas leads the bullet list
+                        drop_blank = False
+                        continue
+                kept.append(line)
+            out = "\n".join(kept)
+            for many, two in _WAYS_COUNT:
+                out = out.replace(many, two)
         return out
 
     _editor_mod.tr = _tr_standalone
@@ -233,11 +253,29 @@ def main() -> int:
         except Exception:
             log.exception("could not reorder Generate colour sets to the top")
 
-    # "Seed from targen" is removed from the New-chart window: it's the one
-    # feature that needs ArgyllCMS installed, and the generators cover the
-    # same ground without it. Hide the radio and its patch-count row; the
-    # widgets stay constructed so the vendored persistence code keeps working.
-    # (The Add-patches window has no targen mode — nothing to remove there.)
+    # Unchecked radio rings: the vendored editor's scoped stylesheets draw
+    # them with palette(mid)/palette(base), which is nearly invisible in dark
+    # mode. ChromIQ fixes this upstream (_unchecked_indicator_css in the
+    # editor) — mirror it here until the next vendor sync by appending a
+    # later (thus winning) base rule with explicit per-theme colours; the
+    # magenta :checked rule keeps outranking it (pseudo-state specificity).
+    def _radio_ring_qss() -> str:
+        from ui.theme import resolve_mode
+        light = resolve_mode(settings.get("appearance", "auto")) == "light"
+        border, fill = (("#b0aba4", "#ffffff") if light
+                        else ("#4a4a4a", "#1f1f1f"))
+        return ("\nQRadioButton::indicator { width: 14px; height: 14px;"
+                " border: 1px solid " + border + "; border-radius: 8px;"
+                " background: " + fill + "; }")
+
+    # "Seed from targen" and "Blank canvas" are removed from the New-chart
+    # window: targen is the one feature that needs ArgyllCMS installed, and
+    # the blank canvas duplicates what the editor itself does — while the
+    # generators cover both. Hide the radios and the patch-count row; the
+    # widgets stay constructed so the vendored persistence code keeps
+    # working. (The Add-patches window has neither mode — nothing to remove
+    # there. ChromIQ dropped Blank canvas upstream too, so after the next
+    # vendor sync the _mode_blank getattr simply finds nothing.)
     def _drop_targen_seed(d) -> None:
         try:
             sl = d._mode_seed.parentWidget().layout()
@@ -251,7 +289,11 @@ def main() -> int:
                             w.hide()
                     break
             d._mode_seed.hide()
-            if d._mode_seed.isChecked():
+            blank = getattr(d, "_mode_blank", None)
+            if blank is not None:
+                blank.hide()
+            if d._mode_seed.isChecked() or (blank is not None
+                                            and blank.isChecked()):
                 d._mode_generate.setChecked(True)
         except Exception:
             log.exception("could not remove the targen seed option")
@@ -264,13 +306,14 @@ def main() -> int:
             super().__init__(*args, **kwargs)
             _generate_sets_first(self)
             _drop_targen_seed(self)
+            self.setStyleSheet(self.styleSheet() + _radio_ring_qss())
 
         def _apply_gen_state(self, st):
             # Saved window state, "Load setup from preset" recipes (the preset
             # store is shared with ChromIQ) and the factory defaults can all
-            # carry mode "seed" — land those on the generators instead of the
-            # hidden radio.
-            if isinstance(st, dict) and st.get("mode") == "seed":
+            # carry mode "seed" or "blank" — land those on the generators
+            # instead of a hidden radio.
+            if isinstance(st, dict) and st.get("mode") in ("seed", "blank"):
                 st = {**st, "mode": "generate"}
             super()._apply_gen_state(st)
 
@@ -278,6 +321,7 @@ def main() -> int:
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             _generate_sets_first(self)
+            self.setStyleSheet(self.styleSheet() + _radio_ring_qss())
 
     _editor_mod._NewChartDialog = _StandaloneNewChartDialog
     _editor_mod._AddPatchesDialog = _StandaloneAddPatchesDialog
@@ -456,6 +500,16 @@ def main() -> int:
 
     dlg._load_chart_from = _load_as_patch_data
 
+    # Same radio-ring fix for the editor's own controls panel (it re-declares
+    # the indicator with palette(mid) too). Re-appended from the snapshotted
+    # base on every theme switch so the ring colours follow the mode.
+    _panel_base_qss = dlg._controls_panel.styleSheet()
+
+    def _fix_editor_radio_rings() -> None:
+        dlg._controls_panel.setStyleSheet(_panel_base_qss + _radio_ring_qss())
+
+    _fix_editor_radio_rings()
+
     # Standalone-only bottom bar: version + attribution + settings gear,
     # appended below the editor's own footer. The vendored dialog stays
     # byte-identical to ChromIQ's (tools/sync_from_chromiq.py), so
@@ -560,6 +614,7 @@ def main() -> int:
         apply_themed_icons(dlg)
         reapply_groupbox_surface(dlg)
         reapply_input_stylesheet(dlg)
+        _fix_editor_radio_rings()
         _style_credit()
         _refresh_gear_icon()
 
