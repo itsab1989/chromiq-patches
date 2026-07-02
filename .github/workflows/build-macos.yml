@@ -206,31 +206,38 @@ jobs:
           ln -sf /Applications "$MOUNT/Applications"
           sync
 
-          # Force-detach can eject yet return "Resource busy" — treat an
-          # already-unmounted volume as success (see ChromIQ workflow).
-          for i in 1 2 3 4 5 6; do
-            if hdiutil detach "$MOUNT" -force 2>/dev/null; then
-              break
+          # Detach gently first (force can wedge the DiskImages daemon and
+          # leave the device "busy" forever — both legs of v1.0.0-beta.1 died
+          # that way), escalate to -force only later, and wait until hdiutil
+          # actually stops listing the image before converting.
+          for i in $(seq 1 12); do
+            if [ "$i" -le 4 ]; then
+              hdiutil detach "$MOUNT" 2>/dev/null && break
+            else
+              hdiutil detach "$MOUNT" -force 2>/dev/null && break
             fi
             if ! hdiutil info | grep -q "$MOUNT"; then
               echo "volume already detached"
               break
             fi
-            echo "detach attempt $i failed (volume busy); retrying in 3s…"
-            sleep 3
+            echo "detach attempt $i failed (volume busy); retrying in 5s…"
+            sleep 5
+          done
+          for i in $(seq 1 12); do
+            hdiutil info | grep -q "/tmp/rw.dmg" || break
+            echo "waiting for DiskImages to release /tmp/rw.dmg…"
+            sleep 5
           done
 
-          sleep 2   # let the device fully release before converting
-
-          for i in 1 2 3; do
+          for i in $(seq 1 5); do
             rm -f "${{ matrix.artifact }}"
             if hdiutil convert /tmp/rw.dmg \
                  -format UDZO -imagekey zlib-level=9 \
                  -o "${{ matrix.artifact }}"; then
               break
             fi
-            echo "convert attempt $i failed; retrying in 5s…"
-            sleep 5
+            echo "convert attempt $i failed; retrying in 10s…"
+            sleep 10
           done
           [ -f "${{ matrix.artifact }}" ] || { echo "DMG convert failed"; exit 1; }
 
@@ -305,21 +312,30 @@ jobs:
           ditto "$THIN_APP" "$MOUNT/ChromIQPatches.app"
           ln -sf /Applications "$MOUNT/Applications"
           sync
-          for i in 1 2 3 4 5 6; do
-            hdiutil detach "$MOUNT" -force 2>/dev/null && break
+          # Same gentle-then-force detach + release-wait as the main DMG above.
+          for i in $(seq 1 12); do
+            if [ "$i" -le 4 ]; then
+              hdiutil detach "$MOUNT" 2>/dev/null && break
+            else
+              hdiutil detach "$MOUNT" -force 2>/dev/null && break
+            fi
             hdiutil info | grep -q "$MOUNT" || { echo "already detached"; break; }
-            echo "detach attempt $i failed; retrying in 3s…"; sleep 3
+            echo "detach attempt $i failed; retrying in 5s…"; sleep 5
           done
-          sleep 2
-          for i in 1 2 3; do
+          for i in $(seq 1 12); do
+            hdiutil info | grep -q "/tmp/rw_x86.dmg" || break
+            echo "waiting for DiskImages to release /tmp/rw_x86.dmg…"
+            sleep 5
+          done
+          for i in $(seq 1 5); do
             rm -f "$X86_DMG"
             if hdiutil convert /tmp/rw_x86.dmg \
                  -format UDZO -imagekey zlib-level=9 \
                  -o "$X86_DMG"; then
               break
             fi
-            echo "x86_64 convert attempt $i failed; retrying in 5s…"
-            sleep 5
+            echo "x86_64 convert attempt $i failed; retrying in 10s…"
+            sleep 10
           done
           [ -f "$X86_DMG" ] || { echo "x86_64 DMG convert failed"; exit 1; }
           rm -f /tmp/rw_x86.dmg

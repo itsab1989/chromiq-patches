@@ -1,9 +1,21 @@
 # Changelog
 
-## v1.0.0-beta.1
+## v1.0.0
 
-- First public release of ChromIQ Patches — ChromIQ's chart-design tool as a
+- First release of ChromIQ Patches — ChromIQ's chart-design tool as a
   standalone app, based on Knut Georg Larsson's original idea.
+- Everything renders with the built-in ChromIQ layout engine (i1Pro strip
+  geometry) — ArgyllCMS is never required to design, preview or save.
+- Save / Export… writes the standalone deliverable: the .ti1 patch set,
+  colour list, i1Profiler .txt/.pxf and the page TIFFs.
+- Loading a .ti2 imports its patches and lays them out fresh with the engine.
+- Preferences: language, appearance, ArgyllCMS location (optional, only for
+  the targen option) — plus an update check against this repo's releases.
+
+## v1.0.0-beta.1 (superseded by v1.0.0)
+
+- First public cut — ChromIQ's chart-design tool as a standalone app,
+  based on Knut Georg Larsson's original idea.
 - Combinable patch generators with live counts and 3D RGB-cube preview.
 - ChromIQ layout engine renders print-ready TIFF charts for i1Pro and
   ColorMunki — no ArgyllCMS required.
