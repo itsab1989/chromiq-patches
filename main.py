@@ -375,7 +375,7 @@ def main() -> int:
     # is written as <chosen>/<name>.* like before.
     def _basic_save_prompt() -> "tuple[str, str] | None":
         from pathlib import Path as _P
-        from PyQt6.QtWidgets import QFileDialog
+        from PyQt6.QtWidgets import QCheckBox, QFileDialog, QGridLayout
         from core.i18n import tr
         fd = QFileDialog(dlg, tr("Save chart as…"),
                          str(_P.home() / "ChromIQ"))
@@ -386,8 +386,31 @@ def main() -> int:
         # Plain app-branded default instead of the layout-derived name
         # (ColorMunki-A4-495p-…) — the user names the chart, not the geometry.
         fd.selectFile("chromiq-patches-chart")
+        # Optional second deliverable: the same chart with its patch ORDER
+        # re-arranged for maximum neighbour/strip contrast (see
+        # standalone_shuffle.py) — written next to the main save.
+        shuffle_cb = QCheckBox(
+            tr("Also save a shuffled copy (for i1Profiler)"), fd)
+        shuffle_cb.setToolTip(tr(
+            "Writes a second version of this chart into a “shuffled” "
+            "subfolder, with the patch order re-arranged for the best "
+            "possible contrast between neighbouring patches and between "
+            "strips. Use that version in i1Profiler — it measures an "
+            "imported patch set exactly in file order and has no shuffle of "
+            "its own, so a chart saved in designed order (ramps, cube order) "
+            "puts look-alike colours side by side and misreads easily. "
+            "The main save keeps your designed order."))
+        shuffle_cb.setChecked(
+            bool(settings.get("patches_save_shuffled_copy", False)))
+        grid = fd.layout()
+        if isinstance(grid, QGridLayout):
+            grid.addWidget(shuffle_cb, grid.rowCount(), 0,
+                           1, grid.columnCount())
+        else:  # non-grid fallback — unexpected, but never lose the option
+            grid.addWidget(shuffle_cb)
         if fd.exec() != QFileDialog.DialogCode.Accepted or not fd.selectedFiles():
             return None
+        settings.set("patches_save_shuffled_copy", shuffle_cb.isChecked())
         chosen = _P(fd.selectedFiles()[0])
         return (chosen.name, str(chosen.parent))
 
@@ -414,9 +437,70 @@ def main() -> int:
     import shutil as _shutil
     _orig_write_chart = dlg._write_chart_into
 
+    def _write_shuffled_copy(target: "Path", name: str) -> str:
+        """Write the contrast-shuffled second deliverable into
+        ``<target>/shuffled/`` as ``<name>-shuffled.*``.
+
+        The patch DATA order is permuted (standalone_shuffle), not just the
+        on-sheet placement — so the .ti1, the colour list, the i1Profiler
+        .txt/.pxf AND the TIFF pages all carry the mixed order. i1Profiler
+        lays an imported set out exactly in list order and can't shuffle it,
+        which is why the layout-only randomisation wouldn't help it. Must run
+        while ``<name>.channels.json`` still exists (it carries the strip
+        length the contrast scoring needs)."""
+        import json as _json
+        from standalone_shuffle import contrast_report, contrast_shuffle
+        program = dlg._program_from_grid()
+        if len(program) < 3 or dlg._spec is None:
+            return ""
+        steps = 0
+        try:
+            layout = _json.loads(
+                (target / f"{name}.channels.json").read_text())["layout"]
+            steps = int(layout.get("steps_in_pass") or 0)
+        except Exception:  # noqa: BLE001
+            log.warning("shuffled copy: no steps_in_pass — optimising "
+                        "consecutive contrast only", exc_info=True)
+        steps = steps or len(program)
+        shuffled = contrast_shuffle(program, steps)
+        sub = target / "shuffled"
+        sub.mkdir(parents=True, exist_ok=True)
+        sname = f"{name}-shuffled"
+        from workflow import ti2_relayout as _R
+        ti1 = _R.write_ti1(dlg._spec, shuffled, sub / f"{sname}.ti1")
+        # Same engine recipe as the main save → identical geometry; the data
+        # order IS the randomisation, so the layout stays sequential.
+        from workflow.layout_engine import chart as _le_chart
+        kw = dlg._engine_panel.get_recipe().build_kwargs()
+        kw["randomize"] = False
+        _le_chart.build_chart(str(ti1), sub / sname, project=sname, **kw)
+        from workflow.chart_exports import write_sidecars
+        write_sidecars(ti1, sub, sname)
+        for leftover in (sub / f"{sname}.ti2", sub / f"{sname}.strips.json"):
+            try:
+                leftover.unlink()
+            except FileNotFoundError:
+                pass
+        before, after = (contrast_report(p, steps)
+                         for p in (program, shuffled))
+        log.info("shuffled copy %s: min neighbour contrast %.1f -> %.1f, "
+                 "strip symmetry %.1f -> %.1f, confusability %.1f -> %.1f",
+                 sname, before[0], after[0], before[1], after[1],
+                 before[2], after[2])
+        return _tr("Shuffled copy (best patch/strip contrast): {folder}"
+                   ).format(folder=f"shuffled/{sname}")
+
     def _standalone_write_chart(target, name):
         msg = _orig_write_chart(target, name)
         target = Path(target)
+        shuffle_note = ""
+        if settings.get("patches_save_shuffled_copy", False):
+            try:
+                shuffle_note = _write_shuffled_copy(target, name)
+            except Exception:  # noqa: BLE001 — never abort the main save
+                log.exception("shuffled copy failed")
+                shuffle_note = _tr("The shuffled copy could not be written — "
+                                   "the chart itself was saved.")
         _shutil.rmtree(target / "_spacer_twin", ignore_errors=True)
         for leftover in (target / f"{name}.ti2", target / "meta.json",
                          target / f"{name}.channels.json"):
@@ -430,6 +514,8 @@ def main() -> int:
         head = _tr("Saved {name} ({pages} + patch files) to {folder}").format(
             name=name, pages=page_word, folder=target)
         rest = [l for l in msg.splitlines()[1:] if l.strip()]
+        if shuffle_note:
+            rest.append(shuffle_note)
         return "\n".join([head] + rest)
 
     dlg._write_chart_into = _standalone_write_chart
