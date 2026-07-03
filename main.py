@@ -386,11 +386,22 @@ def main() -> int:
                                      QMessageBox, QPushButton, QSizePolicy,
                                      QVBoxLayout)
         from core.i18n import tr
+        from ui.styles import SPEC_MAGENTA
         from ui.widgets import confirm, open_dir_dialog
 
         d = QDialog(dlg)
         d.setWindowTitle(tr("Save chart as…"))
         d.setMinimumWidth(580)
+        # The editor's magenta accent instead of the app-wide cyan — the same
+        # controls _install_magenta_accents covers (checked/hovered boxes,
+        # focused inputs), scoped to this dialog.
+        d.setStyleSheet(f"""
+            QCheckBox::indicator:checked {{
+                background: {SPEC_MAGENTA}; border-color: {SPEC_MAGENTA};
+            }}
+            QCheckBox::indicator:hover {{ border-color: {SPEC_MAGENTA}; }}
+            QLineEdit:focus {{ border-color: {SPEC_MAGENTA}; }}
+        """)
         lay = QVBoxLayout(d)
         lay.setContentsMargins(24, 20, 24, 16)
         lay.setSpacing(10)
