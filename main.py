@@ -369,28 +369,70 @@ def main() -> int:
     if hasattr(dlg, "_apply_btn"):
         dlg._apply_btn.setText(_tr("Save / Export…").replace("&", "&&"))
 
-    # Standalone save prompt: a basic non-native save dialog (type a name,
-    # pick a location) instead of ChromIQ's descriptive-prefix prompt. The
-    # instance attribute shadows the vendored _prompt_save_as_name; the chart
-    # is written as <chosen>/<name>.* like before.
+    # Standalone save prompt: chart name + location + Browse… (mirroring the
+    # vendored editor prompt, minus its descriptive-prefix machinery) instead
+    # of Qt's built-in file browser. The browser was a poor fit for
+    # folder-shaped saves: its accept button turns into "Open" whenever the
+    # typed name matches an existing folder (e.g. re-saving a chart) and
+    # navigates into it instead of saving, and its toolbar arrows ignore the
+    # dark theme. Browse… uses ChromIQ's open_dir_dialog, which themes them.
+    # The instance attribute shadows the vendored _prompt_save_as_name; the
+    # chart is written as <location>/<name>/<name>.*.
     def _basic_save_prompt() -> "tuple[str, str] | None":
+        import re
         from pathlib import Path as _P
-        from PyQt6.QtWidgets import QCheckBox, QFileDialog, QGridLayout
+        from PyQt6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox,
+                                     QHBoxLayout, QLabel, QLineEdit,
+                                     QMessageBox, QPushButton, QSizePolicy,
+                                     QVBoxLayout)
         from core.i18n import tr
-        fd = QFileDialog(dlg, tr("Save chart as…"),
-                         str(_P.home() / "ChromIQ"))
-        fd.setOption(QFileDialog.Option.DontUseNativeDialog, True)
-        fd.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
-        fd.setFileMode(QFileDialog.FileMode.AnyFile)
-        fd.setLabelText(QFileDialog.DialogLabel.FileName, tr("Chart name:"))
+        from ui.widgets import confirm, open_dir_dialog
+
+        d = QDialog(dlg)
+        d.setWindowTitle(tr("Save chart as…"))
+        d.setMinimumWidth(580)
+        lay = QVBoxLayout(d)
+        lay.setContentsMargins(24, 20, 24, 16)
+        lay.setSpacing(10)
+        heading = QLabel(tr("Save this chart to a folder"), d)
+        heading.setStyleSheet("font-weight: 600; font-size: 14px;")
+        lay.addWidget(heading)
+        sub = QLabel(tr("The name becomes both the folder and the chart's "
+                        "file names."), d)
+        sub.setWordWrap(True)
+        lay.addWidget(sub)
+
+        name_row = QHBoxLayout()
+        name_row.addWidget(QLabel(tr("Chart name:"), d))
         # Plain app-branded default instead of the layout-derived name
         # (ColorMunki-A4-495p-…) — the user names the chart, not the geometry.
-        fd.selectFile("chromiq-patches-chart")
+        name_edit = QLineEdit("chromiq-patches-chart", d)
+        name_edit.selectAll()
+        name_row.addWidget(name_edit, 1)
+        lay.addLayout(name_row)
+
+        loc_row = QHBoxLayout()
+        loc_row.addWidget(QLabel(tr("Location:"), d))
+        start = (settings.get("patches_save_location", "")
+                 or settings.get("custom_output_path", "")
+                 or str(_P.home() / "ChromIQ"))
+        loc_edit = QLineEdit(start, d)
+        loc_row.addWidget(loc_edit, 1)
+        browse = QPushButton(tr("Browse…"), d)
+        browse.setSizePolicy(QSizePolicy.Policy.Fixed,
+                             QSizePolicy.Policy.Fixed)
+        browse.clicked.connect(lambda: (
+            (lambda p: loc_edit.setText(p) if p else None)(
+                open_dir_dialog(d, tr("Choose a folder"),
+                                start_dir=loc_edit.text() or start))))
+        loc_row.addWidget(browse)
+        lay.addLayout(loc_row)
+
         # Optional second deliverable: the same chart with its patch ORDER
         # re-arranged for maximum neighbour/strip contrast (see
         # standalone_shuffle.py) — written next to the main save.
         shuffle_cb = QCheckBox(
-            tr("Also save a shuffled copy (for i1Profiler)"), fd)
+            tr("Also save a shuffled copy (for i1Profiler)"), d)
         shuffle_cb.setToolTip(tr(
             "Writes a second version of this chart into a “shuffled” "
             "subfolder, with the patch order re-arranged for the best "
@@ -402,17 +444,47 @@ def main() -> int:
             "The main save keeps your designed order."))
         shuffle_cb.setChecked(
             bool(settings.get("patches_save_shuffled_copy", False)))
-        grid = fd.layout()
-        if isinstance(grid, QGridLayout):
-            grid.addWidget(shuffle_cb, grid.rowCount(), 0,
-                           1, grid.columnCount())
-        else:  # non-grid fallback — unexpected, but never lose the option
-            grid.addWidget(shuffle_cb)
-        if fd.exec() != QFileDialog.DialogCode.Accepted or not fd.selectedFiles():
+        lay.addWidget(shuffle_cb)
+
+        def _clean_name() -> str:
+            # Same sanitisation as the vendored prompt — the name becomes
+            # folder + file stems, so spaces turn into hyphens etc.
+            raw = name_edit.text().strip()
+            clean = re.sub(r"\s+", "-", raw)
+            return re.sub(r"[^\w\-.]", "_", clean).strip("._-") or "chart"
+
+        def _on_save() -> None:
+            location = loc_edit.text().strip() or start
+            target = _P(location) / _clean_name()
+            if target.exists():
+                choice = confirm(
+                    d, tr("Overwrite existing folder?"),
+                    tr("'{name}' already exists in:\n  {folder}\n\n"
+                       "Overwrite it?").format(name=target.name,
+                                               folder=target.parent),
+                    QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No)
+                if choice != QMessageBox.StandardButton.Yes:
+                    return
+            d.accept()
+
+        bb = QDialogButtonBox(d)
+        ok_btn = bb.addButton(tr("Save"), QDialogButtonBox.ButtonRole.AcceptRole)
+        cancel_btn = bb.addButton(tr("Cancel"),
+                                  QDialogButtonBox.ButtonRole.RejectRole)
+        ok_btn.setDefault(True)
+        ok_btn.clicked.connect(_on_save)
+        cancel_btn.clicked.connect(d.reject)
+        lay.addWidget(bb)
+        name_edit.setFocus()
+
+        if d.exec() != QDialog.DialogCode.Accepted:
             return None
+        location = loc_edit.text().strip() or start
         settings.set("patches_save_shuffled_copy", shuffle_cb.isChecked())
-        chosen = _P(fd.selectedFiles()[0])
-        return (chosen.name, str(chosen.parent))
+        settings.set("patches_save_location", location)
+        return (_clean_name(), location)
 
     dlg._prompt_save_as_name = _basic_save_prompt
 
