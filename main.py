@@ -679,6 +679,43 @@ def main() -> int:
 
     _fix_editor_radio_rings()
 
+    # The main window's own checkboxes and inputs (the grid-chrome row above
+    # the patch grid — "Show patch number", "Show gap between patches", the
+    # gap/zoom spinboxes) sit OUTSIDE the magenta-styled controls panel, so
+    # they fell back to the app-wide cyan accent. Scope the editor's magenta
+    # (the same rule set the controls panel carries) onto the whole dialog;
+    # nearer stylesheets — the controls panel and the New-chart/Add
+    # subclasses — keep precedence for their own widgets, with the same
+    # accent anyway. Colour constants are theme-independent, so this needs
+    # no re-application on theme switch.
+    from ui.styles import SPEC_MAGENTA
+    dlg.setStyleSheet(dlg.styleSheet() + f"""
+        QCheckBox::indicator:checked {{
+            background: {SPEC_MAGENTA}; border-color: {SPEC_MAGENTA};
+        }}
+        QCheckBox::indicator:hover {{ border-color: {SPEC_MAGENTA}; }}
+        QCheckBox::indicator:checked:disabled {{
+            background: #4a4a4a; border-color: #4a4a4a;
+        }}
+        QRadioButton::indicator:checked {{
+            background: {SPEC_MAGENTA}; border-color: {SPEC_MAGENTA};
+        }}
+        QRadioButton::indicator:checked:disabled {{
+            background: #4a4a4a; border-color: #4a4a4a;
+        }}
+        QLineEdit:focus, QComboBox:focus,
+        QSpinBox:focus, QDoubleSpinBox:focus {{
+            border-color: {SPEC_MAGENTA};
+        }}
+        QComboBox QAbstractItemView {{
+            selection-background-color: {SPEC_MAGENTA};
+            selection-color: white;
+        }}
+        QComboBox QAbstractItemView::item:hover {{
+            background: {SPEC_MAGENTA}; color: white;
+        }}
+    """)
+
     # Standalone-only bottom bar: version + attribution + settings gear,
     # appended below the editor's own footer. The vendored dialog stays
     # byte-identical to ChromIQ's (tools/sync_from_chromiq.py), so
