@@ -1,5 +1,5 @@
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 
 # The ChromIQ release this repo's vendored modules were last synced from
 # (see tools/sync_from_chromiq.py). Bump it on every sync.
-CHROMIQ_SYNC_VERSION = "3.13.0-beta.62"
+CHROMIQ_SYNC_VERSION = "3.13.0-beta.142"

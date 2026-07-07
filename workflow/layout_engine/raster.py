@@ -178,6 +178,7 @@ INDICATOR_LETTER_SPACING = 0.12
 # Auto-sized multi-letter labels fill only this fraction of the strip width, so
 # the inter-indicator gap exceeds the intra-letter gap (#93).
 INDICATOR_FIT_FRAC = 0.80
+INDICATOR_MIN_LEGIBLE_MM = 1.5   # auto-size floor — smaller is unreadable in print
 
 
 def _draw_indicator(draw, cx: int, top: int, text: str, font, spacing_px: int) -> None:
@@ -241,7 +242,14 @@ def effective_indicator_size_mm(geom, dpi: int, font: str, size_mm: float) -> fl
     # the gap BETWEEN indicators stays larger than the gap between the two
     # letters of one indicator (otherwise "AA AB" reads as "A AA B"). (#93)
     avail = geom.pwid * INDICATOR_FIT_FRAC
-    return target if widest2 <= avail else target * avail / widest2
+    if widest2 <= avail:
+        return target
+    # Never shrink below legibility: with a wide proportional font on a
+    # narrow-patch chart the fit collapsed to a fraction of a millimetre —
+    # labels so small a user thought they were switched off (#108 follow-up).
+    # A slightly-too-wide label beats an invisible one; the preflight
+    # too-wide warning still tells the user why.
+    return max(min(target, INDICATOR_MIN_LEGIBLE_MM), target * avail / widest2)
 
 
 def _furniture_reserves_mm(geom, kw: dict) -> tuple[float, float]:
@@ -624,6 +632,10 @@ def _render_notes_strip(width_px: int, height_px: int, dpi: int,
 class RenderResult:
     images: list[Image.Image]
     low_contrast_passes: list[int]   # global pass indices flagged by the guard
+    # Bottom of the rendered strip-label band (labels + underline) in page px,
+    # or None when indicators are off. The measure-tab scan arrow hangs from
+    # this line, printtarg-style; without it the arrow floats above the patches.
+    label_band_bottom_px: int | None = None
 
 
 def _hexagon_points(x0: int, y0: int, w: int, ph: int, step: int):
@@ -753,6 +765,10 @@ def render_pages(
     # offset (mm) nudges the labels up (negative, toward the top margin) or down,
     # together with their underline (#93).
     _lbl_top = px(place.leader_top + strip_label_offset_mm)
+    _band_bottom = None
+    if draw_indicators:
+        _band_bottom = _lbl_top + label_band_h + \
+            ((ul_gap + ul_th) if underline_on else 0)
 
     def _resolve_with(t: str, ctx: dict) -> str:
         try:
@@ -936,7 +952,8 @@ def render_pages(
         images.append(img)
 
     flagged = contrast.low_contrast_passes(rgb_by_slot, steps)
-    return RenderResult(images=images, low_contrast_passes=flagged)
+    return RenderResult(images=images, low_contrast_passes=flagged,
+                        label_band_bottom_px=_band_bottom)
 
 
 def export_clip_template(out_base: str | Path, *, width_px: int, height_px: int,

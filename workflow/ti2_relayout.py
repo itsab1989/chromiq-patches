@@ -385,7 +385,8 @@ def recipe_layout_from_options(options: "LayoutOptions") -> dict:
 
 def save_editor_meta(ti2_path: Path, spec: "ChartSpec",
                      options: "LayoutOptions", basename: str,
-                     recipe: dict | None = None) -> None:
+                     recipe: dict | None = None,
+                     sync_layout: bool = True) -> None:
     """Write a main-app-style ``meta.json`` into the chart folder (next to
     *ti2_path*), carrying the editor's layout knobs so reopening restores the
     panel. Best-effort: a failure here must never block a successful chart
@@ -394,7 +395,13 @@ def save_editor_meta(ti2_path: Path, spec: "ChartSpec",
     ``recipe`` is the New chart / Add window's creation recipe
     (``_collect_gen_state``); when given it's stored as ``editor_recipe`` so the
     design can be reloaded for tweaking/recreation. ``None`` leaves any existing
-    recipe untouched (a layout-only save mustn't wipe it)."""
+    recipe untouched (a layout-only save mustn't wipe it).
+
+    ``sync_layout=False`` stores the recipe exactly as given. Used for charts
+    the ChromIQ layout engine built: their real layout lives in the recipe in
+    ``channels.json``, and *options* only mirrors printtarg widgets that didn't
+    produce the chart — syncing from those would stamp unrelated values into
+    the recipe (#100)."""
     from core.file_manager import Run, RunMeta
     try:
         run = Run.for_dir(Path(ti2_path).parent)
@@ -411,11 +418,13 @@ def save_editor_meta(ti2_path: Path, spec: "ChartSpec",
             # the chart was actually built with (Set A = options), so a chart's
             # two records never disagree (#92). Generators / colour-set params /
             # mode / patch count stay frozen — only the layout block (+ the
-            # instrument / paper identity) syncs.
+            # instrument / paper identity) syncs. Engine-built charts skip the
+            # sync (see the docstring).
             synced = dict(recipe)
-            synced["layout"] = recipe_layout_from_options(options)
-            synced["instr"] = spec.instrument_flag
-            synced["paper"] = spec.paper_flag
+            if sync_layout:
+                synced["layout"] = recipe_layout_from_options(options)
+                synced["instr"] = spec.instrument_flag
+                synced["paper"] = spec.paper_flag
             meta.editor_recipe = synced
         run.save_meta(meta)
     except Exception:  # noqa: BLE001 — sidecar write must never be fatal

@@ -161,6 +161,11 @@ DEFAULTS: dict[str, Any] = {
     "restore_last_session":      False,
     "appearance":                "auto",   # "light" | "dark" | "auto"
     "language":                  "en",     # ISO code; applied on restart (core/i18n.py)
+    # When True, file open/save/folder pickers use the OS-native dialog instead
+    # of ChromIQ's themed one. Native is much faster to populate on Windows, but
+    # it's the OS's own dialog: it can't carry ChromIQ's custom sidebar shortcuts
+    # or the built-in image-preview pane (Qt/OS limitation — see ui/widgets.py).
+    "use_native_file_dialogs":   False,
     "show_welcome_dialog":       True,
     "window_maximized":          False,
     "window_fullscreen":         False,
@@ -175,10 +180,35 @@ DEFAULTS: dict[str, Any] = {
     # generated preview, compare to per-(instrument, paper+orientation) minimum
     # thresholds, and flag violations for jig/rig users.
     "margin_inspector_show":     True,    # show the "Measured from Preview" frame
+    "layout_info_show":          True,    # show the "Chart layout information" panel
     "margin_violation_notify":   True,    # warn when a measured margin < threshold
     "margin_guides_show":        False,   # dotted threshold guide lines on preview
     "margin_measured_guides_show": False,  # long dotted lines at the measured margins
     "margin_thresholds":         "",      # JSON blob; "" → default_margin_thresholds()
+    # Scanner/camera profiling: misalignment-check thresholds (Knut #108).
+    # Editable in Settings → Scanner; the defaults carry a buffer for real
+    # scans (noisier than the built-in demo images).
+    #   (the ΔE-vs-aims share check was retired in beta.130 — real prints
+    #   can't reach the chart's ideal aims, so it flagged aligned scans)
+    "scanner_selfcheck_peak":    30.0,    # colprof self-check peak err → warning
+    "scanner_selfcheck_avg":     12.0,    # …AND avg err must exceed this too
+    # Check-alignment probe verdict: the user's position competes with the
+    # 8-direction probe star on Knut's normalised scale (best probe = 1,
+    # worst = 0). Calibrated on his real Wolf Faust scan so a 25 % grid
+    # offset flags and ≤15 % passes at 50 % sample area (#108).
+    "scanner_check_agreement":   0.85,
+    # Flank override (Knut's derivative design): patch borders are LINES of
+    # high spatial gradient (centred, two scales — symmetric in all 8
+    # directions); a box is ON an edge when 3+ CONNECTED sub-cells of its
+    # 9x9 grid carry a peak above the grain floor (a line crosses adjacent
+    # cells, dust scatters) AND the box is clean at some nearby position.
+    # 7+ such boxes flag the page over the ladder floor. Calibrated on his
+    # real scans: aligned <=6 boxes (LaserSoft's printed bars ARE edges
+    # near some box rims), just-crossing offsets 20-160.
+    "scanner_flank_limit":       0.30,
+    # Settings → Paths (Knut #108): where "Install profile" copies the .icc.
+    # Empty = the platform's per-user colour-profile folder.
+    "profile_install_dir":       "",
     # Strip-indicator styling (Knut #93): the per-chart detail controls moved to
     # Settings → Chart Layout. These are the app-wide DEFAULTS used for new charts;
     # presets still carry (and restore) their own styling. Keys mirror the

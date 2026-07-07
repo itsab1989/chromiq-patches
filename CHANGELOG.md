@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.2.1
+
+- Colour extremes generator: the "per end" maximum is raised from 100 to
+  200, matching Pastels and Highlights & shadows (Knut).
+- Vendored modules synced from ChromIQ 3.13.0-beta.142 (last sync was
+  beta.62): dozens of layout-engine, generator and editor improvements
+  flow in — including the engine keeping exact chart geometry, the
+  renderer fixes from the scanner-profiling work, and refreshed
+  translations for all 13 languages.
+- Two new built-in Scanner presets by Knut Georg Larsson (A4-6860p and
+  Letter-6500p, two pages each) appear in the preset choices.
+
 ## v1.2.0
 
 - Optional shuffled copy on save: a checkbox in the save dialog writes a

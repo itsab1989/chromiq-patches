@@ -322,6 +322,20 @@ def _paper_code_known(code: str) -> bool:
     return code in PAPER_LABELS
 
 
+def _unchecked_indicator_css(settings) -> str:
+    """Border + fill for an UNCHECKED radio indicator, as explicit per-theme
+    colours. The editor's scoped stylesheets used palette(mid)/palette(base),
+    which renders the ring nearly invisible in dark mode — the checkboxes
+    stay readable because they keep the app-wide QSS's indicator border, so
+    match those tokens exactly (dark: styles.BORDER_HI on BG_INPUT; light:
+    light_styles.LM_BORDER_HI on LM_BG_INPUT)."""
+    from ui.theme import resolve_mode
+    light = resolve_mode(
+        settings.get("appearance", "auto") if settings else "auto") == "light"
+    return ("border: 1px solid #b0aba4; background: #ffffff;" if light
+            else "border: 1px solid #4a4a4a; background: #1f1f1f;")
+
+
 def _qcolor(rgb: tuple[float, float, float]) -> QColor:
     return QColor(*(max(0, min(255, round(v / 100 * 255))) for v in rgb))
 
@@ -666,8 +680,8 @@ class _PreviewLabel(QLabel):
 # New-chart setup
 # ---------------------------------------------------------------------------
 class _NewChartDialog(QDialog):
-    """New-chart setup: source (blank / targen seed / pasted colours) plus the
-    printtarg layout knobs that affect rendering."""
+    """New-chart setup: source (targen seed / pasted colours / generated
+    sets) plus the printtarg layout knobs that affect rendering."""
 
     def __init__(self, bin_dir: Path, settings=None,
                  parent: QWidget | None = None,
@@ -724,9 +738,7 @@ class _NewChartDialog(QDialog):
             "• Instrument & Paper — which measuring device you'll use and what "
             "paper you'll print on. ChromIQ uses these to lay the patches out in a "
             "way your device can read, at the right page size.\n\n"
-            "• Patches — how to fill the chart to begin with. There are four ways:\n"
-            "    – Blank canvas — start empty and add every colour by hand in the "
-            "editor.\n"
+            "• Patches — how to fill the chart to begin with. There are three ways:\n"
             "    – Seed from targen — enter a number and let ChromIQ spread that "
             "many colours evenly across the whole colour range. A great all-round "
             "starting point you can then rearrange.\n"
@@ -979,7 +991,6 @@ class _NewChartDialog(QDialog):
         # --- Source ---------------------------------------------------------
         src_box = QGroupBox(tr("Patches"), self)
         sl = QVBoxLayout(src_box)
-        self._mode_blank = QRadioButton(tr("Blank canvas (add patches by hand)"), src_box)
         self._mode_seed = QRadioButton(tr("Seed from targen (optimised patch set)"), src_box)
         self._mode_paste = QRadioButton(tr("Paste colour values (or load a file)"), src_box)
         self._mode_seed.setChecked(True)
@@ -994,7 +1005,6 @@ class _NewChartDialog(QDialog):
         seed_row.addWidget(self._count)
         seed_row.addStretch(1)
         sl.addLayout(seed_row)
-        sl.addWidget(self._mode_blank)
         sl.addWidget(self._mode_paste)
         paste_indent = QVBoxLayout()
         paste_indent.setContentsMargins(22, 0, 0, 0)
@@ -1027,7 +1037,7 @@ class _NewChartDialog(QDialog):
 
         # Enable/disable subcontrols by mode
         self._mode_seed.toggled.connect(lambda on: self._count.setEnabled(on))
-        for r in (self._mode_blank, self._mode_seed, self._mode_paste,
+        for r in (self._mode_seed, self._mode_paste,
                   self._mode_generate):
             r.toggled.connect(self._refresh_source_widgets)
         self._refresh_source_widgets()
@@ -1187,7 +1197,8 @@ class _NewChartDialog(QDialog):
     # New-chart sessions (attribute = "_gen_<name>").
     _GEN_CHECKS = ("cube", "corners", "spirals", "skin", "blues", "greens",
                    "sunrises", "flamingos", "neutral", "nearneutral", "edges",
-                   "hs", "pastel", "image", "whiteblack", "fill", "unique")
+                   "hs", "pastel", "image", "whiteblack", "fill", "unique",
+                   "fill_unit_pages")
     _GEN_SPINS = ("cube_n", "corners_edge", "spirals_end", "spirals_reach",
                   "skin_n", "skin_ranges", "blues_n", "blues_layers",
                   "greens_n", "greens_layers", "sunrises_n", "sunrises_layers",
@@ -1196,7 +1207,7 @@ class _NewChartDialog(QDialog):
                   "nearneutral_off",
                   "edges_n", "edges_faces", "hs_n", "hs_reach",
                   "pastel_n", "pastel_layers", "image_n", "whiteblack_n",
-                  "fill_to")
+                  "fill_to", "fill_pages")
     # Factory defaults — what "Restore defaults" resets the whole window to
     # (also the fresh-install state). Must mirror the inline widget defaults.
     # Covers the source mode, chart instrument/paper, the seed count, every
@@ -1217,7 +1228,7 @@ class _NewChartDialog(QDialog):
                "flamingos": True, "neutral": True, "nearneutral": True,
                "edges": False, "hs": False,
                "pastel": False, "image": False, "whiteblack": False,
-               "fill": False, "unique": True},
+               "fill": False, "unique": True, "fill_unit_pages": False},
         "sp": {"cube_n": 8, "corners_edge": 2, "spirals_end": 8,
                "spirals_reach": 16,
                "skin_n": 8, "skin_ranges": 3, "blues_n": 64,
@@ -1229,7 +1240,7 @@ class _NewChartDialog(QDialog):
                "edges_n": 1,
                "edges_faces": 0, "hs_n": 24, "hs_reach": 16, "pastel_n": 24,
                "pastel_layers": 2, "image_n": 24, "whiteblack_n": 1,
-               "fill_to": 1000},
+               "fill_to": 1000, "fill_pages": 1},
     }
 
     def _spacer_mode(self) -> str:
@@ -1332,11 +1343,17 @@ class _NewChartDialog(QDialog):
                 # unticked — never enabled from the factory default, which is *on*
                 # for several sets (Knut). Factory-reset passes a full dict.
                 w.setChecked(bool(cb.get(n, False)))
+        # fill_unit_pages is one radio of a mutex: unchecking it above leaves
+        # neither unit selected, so set its "patches" sibling to the complement
+        # (absent in old recipes → patches, the pre-#100 behaviour).
+        pages_w = getattr(self, "_gen_fill_unit_pages", None)
+        patches_w = getattr(self, "_gen_fill_unit_patches", None)
+        if pages_w is not None and patches_w is not None:
+            patches_w.setChecked(not pages_w.isChecked())
 
     def _collect_gen_state(self) -> dict:
         mode = ("generate" if self._mode_generate.isChecked() else
-                "paste" if self._mode_paste.isChecked() else
-                "blank" if self._mode_blank.isChecked() else "seed")
+                "paste" if self._mode_paste.isChecked() else "seed")
         return {
             "mode": mode,
             **self._collect_gen_sets(),
@@ -1417,8 +1434,10 @@ class _NewChartDialog(QDialog):
             (self._bd_16 if lo["bit16"] else self._bd_8).setChecked(True)
 
         self._apply_gen_sets(st)
+        # "blank" (the removed Blank-canvas mode) is deliberately absent: a
+        # saved state or preset that carries it keeps the current selection.
         radio = {"generate": self._mode_generate, "paste": self._mode_paste,
-                 "blank": self._mode_blank, "seed": self._mode_seed}.get(
+                 "seed": self._mode_seed}.get(
                      st.get("mode"))
         if radio is not None:
             radio.setChecked(True)
@@ -1568,7 +1587,7 @@ class _NewChartDialog(QDialog):
                                      "already covers them. 'Per end' is how many "
                                      "patches at each corner; 'reach' how far in they "
                                      "spiral."))
-        self._gen_spirals_end = _spin(1, 100, 8)
+        self._gen_spirals_end = _spin(1, 200, 8)   # max matches Pastels/H&S (Knut)
         self._gen_spirals_reach = _spin(2, 45, 16)
         self._gen_spirals_count = _count_label()
         gg.addWidget(self._gen_spirals, 10, 0)
@@ -2128,12 +2147,12 @@ class _NewChartDialog(QDialog):
             /* This dialog sets its own stylesheet, which drops the app-wide
                round radio geometry — so re-declare the base indicator round
                (border-radius = half ⇒ circle), else a checked radio draws as a
-               magenta square. Checkboxes keep their square tick. */
+               magenta square. Checkboxes keep their square tick. Explicit
+               per-theme colours, not palette(mid): see _unchecked_indicator_css. */
             QRadioButton::indicator {{
                 width: 14px; height: 14px;
-                border: 1px solid palette(mid);
+                {_unchecked_indicator_css(self._settings)}
                 border-radius: 8px;
-                background: palette(base);
             }}
             QRadioButton::indicator:checked {{
                 background: {SPEC_MAGENTA}; border-color: {SPEC_MAGENTA};
@@ -3306,8 +3325,8 @@ class Ti2RelayoutDialog(QDialog):
                                  QSizePolicy.Policy.Preferred)
         src.addWidget(self._info)
         src.addWidget(_magenta_tip(
-            "Chart patch set editor",
-            "Welcome! This is where you build the PATCH SET for your chart — the "
+            tr("Chart patch set editor"),
+            tr("Welcome! This is where you build the PATCH SET for your chart — the "
             "collection of little colour squares (we call each one a \"patch\") that "
             "will be measured. You choose which colours are in the set, what order "
             "they're in, and you can recolour, add or remove them.\n\n"
@@ -3333,7 +3352,7 @@ class Ti2RelayoutDialog(QDialog):
             "whether your colours are well mixed and, if they are, marks the set "
             "so your instrument may read each strip in either direction. You only "
             "have to get involved for tricky, structured sets — see the "
-            "force-randomised-tag option in the controls for more.",
+            "force-randomised-tag option in the controls for more."),
             self, min_width=560))
         outer.addLayout(src)
 
@@ -3409,12 +3428,21 @@ class Ti2RelayoutDialog(QDialog):
         # so the set can be viewed as a whole like in i1Profiler (Knut #93).
         _crow2 = QHBoxLayout()
         _crow2.setSpacing(12)
+        # These two live in the swatch-grid chrome, outside the magenta-scoped
+        # controls panel, so they'd fall back to the app-wide cyan indicator —
+        # give them the editor's magenta accent to match the rest of the dialog.
+        _cb_magenta = (
+            f"QCheckBox::indicator:checked {{ background: {SPEC_MAGENTA};"
+            f" border-color: {SPEC_MAGENTA}; }}"
+            f"QCheckBox::indicator:hover {{ border-color: {SPEC_MAGENTA}; }}")
         self._show_numbers_check = QCheckBox(tr("Show patch number"), self)
         self._show_numbers_check.setChecked(True)
+        self._show_numbers_check.setStyleSheet(_cb_magenta)
         self._show_numbers_check.toggled.connect(self._set_show_numbers)
         _crow2.addWidget(self._show_numbers_check)
         self._show_gap_check = QCheckBox(tr("Show gap between patches"), self)
         self._show_gap_check.setChecked(True)
+        self._show_gap_check.setStyleSheet(_cb_magenta)
         self._show_gap_check.toggled.connect(self._set_show_gap)
         _crow2.addWidget(self._show_gap_check)
         _crow2.addStretch(1)
@@ -3658,12 +3686,12 @@ class Ti2RelayoutDialog(QDialog):
             /* This dialog sets its own stylesheet, which drops the app-wide
                round radio geometry — so re-declare the base indicator round
                (border-radius = half ⇒ circle), else a checked radio draws as a
-               magenta square. Checkboxes keep their square tick. */
+               magenta square. Checkboxes keep their square tick. Explicit
+               per-theme colours, not palette(mid): see _unchecked_indicator_css. */
             QRadioButton::indicator {{
                 width: 14px; height: 14px;
-                border: 1px solid palette(mid);
+                {_unchecked_indicator_css(self._settings)}
                 border-radius: 8px;
-                background: palette(base);
             }}
             QRadioButton::indicator:checked {{
                 background: {SPEC_MAGENTA}; border-color: {SPEC_MAGENTA};
@@ -4941,12 +4969,18 @@ class Ti2RelayoutDialog(QDialog):
         if not isinstance(rec, dict) or self._options is None:
             return
         o = self._options
-        # Shared Set-A → Set-B layout mapping (#92), so the editor and the Create
-        # Chart tab keep a recipe's layout in step the exact same way.
-        rec["layout"] = R.recipe_layout_from_options(o)
-        if self._spec is not None:
-            rec["instr"] = self._spec.instrument_flag
-            rec["paper"] = self._spec.paper_flag
+        # Engine charts skip the layout/identity sync: their real layout is the
+        # engine recipe (channels.json), while self._options / self._spec mirror
+        # printtarg-era knobs that didn't produce the chart — syncing from those
+        # would overwrite the design's own values (#100). The realised-patch-count
+        # refresh below still applies.
+        if not self._engine_active():
+            # Shared Set-A → Set-B layout mapping (#92), so the editor and the
+            # Create Chart tab keep a recipe's layout in step the exact same way.
+            rec["layout"] = R.recipe_layout_from_options(o)
+            if self._spec is not None:
+                rec["instr"] = self._spec.instrument_flag
+                rec["paper"] = self._spec.paper_flag
         if rec.get("mode") == "generate" and isinstance(rec.get("sp"), dict):
             try:
                 n = len(self._program_from_grid())
@@ -6381,6 +6415,16 @@ class Ti2RelayoutDialog(QDialog):
         # measurement (workflow.scanin_target, #97). Best-effort.
         from workflow.chart_exports import write_sidecars
         extras = write_sidecars(target / f"{name}.ti1", target, name)
+        # Write meta.json with the creation recipe (Set B), like the printtarg
+        # save path does — without it an engine chart saved or applied from
+        # here loses its New-patch-set design, so the Create Chart tab can't
+        # carry it into presets and the editor can't reload it (#100). The
+        # recipe stays as created (sync_layout=False): the chart's real layout
+        # is the engine recipe in channels.json, not self._options.
+        self._reconcile_recipe_with_chart()
+        R.save_editor_meta(target / f"{name}.ti2", self._spec,
+                           self._options or R.LayoutOptions(), name,
+                           recipe=self._chart_recipe, sync_layout=False)
         pages = len(result.tiff_paths or [])
         msg = (f"Saved engine chart {name}.ti2 + {pages} page(s) to {target}\n"
                f"ChromIQ layout engine · {recipe.instrument} · {recipe.paper} · "

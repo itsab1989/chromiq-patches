@@ -330,6 +330,30 @@ QCheckBox::indicator:disabled {{
     background: {LM_BG_WINDOW};
     border-color: {LM_BORDER};
 }}
+QRadioButton {{
+    spacing: 6px;
+}}
+QRadioButton::indicator {{
+    width: 14px;
+    height: 14px;
+    border: 1px solid {LM_BORDER_HI};
+    border-radius: 7px;
+    background: {LM_BG_INPUT};
+}}
+QRadioButton::indicator:checked {{
+    background: {ACCENT_BLUE};
+    border-color: {ACCENT_BLUE};
+}}
+QRadioButton::indicator:hover {{
+    border-color: {ACCENT_HOVER};
+}}
+QRadioButton:disabled {{
+    color: {LM_TEXT_FAINT};
+}}
+QRadioButton::indicator:disabled {{
+    background: {LM_BG_WINDOW};
+    border-color: {LM_BORDER};
+}}
 
 /* -- Log / terminal output — v2 light variant --------------------- */
 QPlainTextEdit#log {{

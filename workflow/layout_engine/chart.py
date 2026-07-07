@@ -297,6 +297,7 @@ def build_chart(
     strips_path.write_text(json.dumps({
         "dpi": dpi, "paper_mm": [w_mm, h_mm],
         "steps_in_pass": layout.steps_in_pass, "strip_pattern": strip_pattern,
+        "label_band_bottom_px": render.label_band_bottom_px,
         "strips": rects, "patches": patch_rects,
     }, indent=2), encoding="utf-8")
 

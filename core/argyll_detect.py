@@ -21,14 +21,21 @@ def all_tools_present(bin_dir: Path) -> bool:
 def find_argyll_bin_path() -> Path | None:
     """Return the first directory that contains all required ArgyllCMS tools, or None."""
 
-    # 1. Check the system PATH first
+    # 1. Check the system PATH first. Resolve symlinks: Homebrew's
+    # /opt/homebrew/bin holds only links into the Cellar — the REAL install
+    # dir is what ChromIQ needs, so ../ref (colour-space profiles, target
+    # references) is found next to the binaries (Knut, #108).
     for tool in _REQUIRED:
         found = which(argyll_binary(tool))
         if found:
-            candidate = Path(found).parent
-            if all_tools_present(candidate):
-                log.info("ArgyllCMS found in PATH at %s", candidate)
-                return candidate
+            real = Path(found).resolve()
+            for candidate in (real.parent, Path(found).parent):
+                if all_tools_present(candidate):
+                    if (candidate.parent / "ref").is_dir() or candidate == real.parent:
+                        log.info("ArgyllCMS found in PATH at %s", candidate)
+                        return candidate
+            if all_tools_present(Path(found).parent):
+                return Path(found).parent
 
     # 2. Fall back to platform-specific well-known locations
     for candidate in argyll_candidate_dirs():

@@ -223,6 +223,12 @@ class ArgyllRunner(QObject):
     ) -> None:
         if self.is_running:
             log.warning("ArgyllRunner: already running, ignoring run(%s)", tool)
+            # Never leave the caller waiting for a finish that can't come —
+            # a silently dropped run() deadlocked the scanner tool's Check
+            # alignment ("Checking the grid…" forever, Knut #108).
+            if on_finish is not None:
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(0, lambda: on_finish(-1))
             return
 
         if use_pty:

@@ -148,8 +148,24 @@ def presets_dir() -> Path:
     return base / "presets"
 
 
-def icc_install_dir() -> Path:
-    """Where ``Install Profile`` writes the freshly built .icc."""
+# User override for icc_install_dir (Settings → Paths, Knut #108). Set at
+# startup and on Settings save; platform_paths must not import core.settings
+# (settings imports from here), so the value is pushed in.
+_icc_install_override: str = ""
+
+
+def set_icc_install_override(path: str) -> None:
+    global _icc_install_override
+    _icc_install_override = (path or "").strip()
+
+
+def icc_install_dir(*, ignore_override: bool = False) -> Path:
+    """Where ``Install Profile`` writes the freshly built .icc. Honours the
+    user's "Profile install folder" (Settings → Paths) when set;
+    *ignore_override* answers "what would the platform default be" (the
+    Settings placeholder needs it while an override is active)."""
+    if _icc_install_override and not ignore_override:
+        return Path(_icc_install_override).expanduser()
     if is_windows():
         windir = Path(os.environ.get("WINDIR", r"C:\Windows"))
         return windir / "System32" / "spool" / "drivers" / "color"

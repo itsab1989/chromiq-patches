@@ -32,6 +32,38 @@ TC918_PRESET_KEY = "__chromiq_tc918_builtin__"
 TC918_PRESET_LABEL = "★  i1Pro TC9.18 by Pharmacist  ·  built-in"
 TC918_TI1_ASSET = "assets/charts/pharmacist/rgb/i1pro/a4/tc918/tc918.ti1"
 TC918_TARGET_NAME = "tc918"
+# Fixed printtarg layout for the TC9.18 preset (matches the Pharmacist recipe
+# printtarg -ii1 -pA4 -t300 -L -m12 -M12 -b). -m drives both -m and -M in the
+# UI; -t is the TIFF DPI; -b forces black & white (uncolored) spacers. -a is
+# pinned to 1.0 *after* -i so it overrides the i1 instrument-default scale
+# (0.95) the recipe doesn't want — a patch scale of 1.0 emits no -a flag.
+TC918_PRINTTARG = {
+    "-i": "i1",
+    "-a": 1.0,
+    "-p": "A4",
+    "-t": 300,
+    "-L": True,
+    "-m": 12,
+    "-b": True,
+}
+
+# ColorMunki built-in presets: plain parameter presets (normal targen→printtarg,
+# no bundled .ti1). Each selects the ColorMunki and turns on Triple density, so
+# printtarg lays the chart out with the denser i1Pro geometry (-ii1) and
+# chart_creator rewrites the .ti2 TARGET_INSTRUMENT back to "X-Rite ColorMunki".
+# They share one printtarg recipe and differ only in the targen patch counts
+# below: (patches -f, white -e, black -B, grey-axis steps -g). Selecting one only
+# loads the settings — the user reviews them and clicks Generate.
+MUNKI324_PRESET_KEY = "__chromiq_munki324_builtin__"
+MUNKI324_PRESET_LABEL = "★  ColorMunki 324 patch standard quality target by Pharmacist  ·  built-in"
+MUNKI648_PRESET_KEY = "__chromiq_munki648_builtin__"
+MUNKI648_PRESET_LABEL = "★  ColorMunki 648 patch high quality target by Pharmacist  ·  built-in"
+
+# key -> (patches, white, black, grey_steps) for the shared ColorMunki recipe.
+MUNKI_TARGEN = {
+    MUNKI324_PRESET_KEY: (324, 2, 2, 16),
+    MUNKI648_PRESET_KEY: (648, 4, 4, 64),
+}
 
 # Prebuilt-files built-in presets: a complete, pre-generated target (ti1 + ti2 +
 # TIFFs) bundled in assets/. Selecting one prompts for a name, copies the bundled
@@ -95,6 +127,18 @@ PREBUILT_PRESETS = {
     EXT1944_LETTER_PRESET_KEY: ("assets/charts/pharmacist/rgb/i1pro/letter/extended1944/extended1944", "i1Pro-Letter-1944p-3pages-extended target by Pharmacist"),
 }
 
+
+def _prebuilt_paper(key: str) -> str:
+    """Page size a prebuilt preset is laid out for, read from its asset path.
+
+    The asset stem is ``.../<instrument>/<paper>/<target>/<target>``, so the
+    paper folder is the third path component from the end. Returned as a display
+    label for the tooltip; unknown sizes fall through upper-cased."""
+    stem = PREBUILT_PRESETS.get(key, ("",))[0]
+    parts = stem.split("/")
+    paper = parts[-3] if len(parts) >= 3 else ""
+    return {"a4": "A4", "a3": "A3", "a3plus": "A3+", "letter": "US Letter"}.get(paper, paper.upper() or "A4")
+
 # --- Knut's TC9.18 + Spyderprint-greys presets -----------------------------
 # A family of built-in presets that all share ONE bundled 1168-patch .ti1
 # (TC9.18 colour set + Spyderprint neutral ramp) and differ only in their
@@ -117,6 +161,42 @@ _KNUT_I1, _KNUT_CM = "i1", "CM"
 # (printtarg -r off, no fixed -R seed).
 KNUT_FLS_SUFFIX = " · Full layout setup"
 _KNUT_FLS_DIR = "assets/charts/knut/rgb/fulllayout"
+
+# Knut's Scanner family (#100): engine-built charts for flatbed-scanner printer
+# profiling. One shared LayoutRecipe (his exported preset, verbatim) — only the
+# paper differs between the A4 and Letter rows. randomize=False + seed=None keeps
+# the printed layout identical to Knut's originals; patch order doesn't matter
+# for scanin (the .cht fiducials locate every patch).
+KNUT_SCANNER_SUFFIX = " · Profile printer with scanner"
+_KNUT_SCANNER_DIR = "assets/charts/knut/rgb/scanner"
+_KNUT_SCANNER_RECIPE: dict = {
+    "instrument": "SS", "paper": "A4R", "dpi": 300,
+    "randomize": False, "seed": None, "hflag": False,
+    "cm_density": 1, "cm_stagger": False,
+    "spacer_on": True, "spacer_mode": "colored", "spacer_palette": [],
+    "spacer_overrides": {}, "edge_spacers": False,
+    "patch_area_align": "top-left", "pscale": 1.0, "sscale": 1.0,
+    "border": 6.0, "margin_top": 8.0, "margin_right": 4.0,
+    "margin_bottom": 4.0, "margin_left": 4.0,
+    "use_instrument_margins": False,
+    "patch_w_mm": 0.0, "patch_h_mm": 0.0,
+    "layout_mode": "area_first", "area_method": "by_width",
+    "area_cols": 0, "area_rows": 0, "area_ratio": 1.0,
+    "area_min_patch_mm": 4.0,
+    "spacer_width_mm": 0.0, "inter_patch_mm": 0.0, "strip_gap_mm": 0.0,
+    "max_strip_mm": 0.0, "strip_indicator_gap_mm": 0.0,
+    "offset_x_mm": 0.0, "offset_y_mm": 0.0,
+    "compression": "lzw", "show_strip_indicators": True,
+    "indicator_font": "JetBrains Mono", "indicator_align": "left",
+    "underline_mode": "off", "underline_thickness_mm": 0.5,
+    "underline_gap_mm": 0.5,
+    "chart_text_font": "Inter", "text_edge_mm": 4.0,
+    "text_edge_top_mm": 4.0, "text_edge_clip_mm": 4.0,
+    "clip_border": True, "clip_border_width_mm": 26.0, "clip_side": "left",
+    "clip_content_mode": "off", "clip_text_font": "Inter",
+    "clip_image_scale": 100.0,
+    "strip_pattern": "A-Z, A-Z", "patch_pattern": "0-9,@-9,@-9;1-999",
+}
 
 
 # Pulls a "-w<number>mm" patch-width token (e.g. "-w11.5mm") out of a name.
@@ -175,24 +255,34 @@ class _Ti1Preset:
     no_randomise: bool = False          # printtarg -r (False = randomise, the default)
     tiff_16bit: bool = True             # 16-bit TIFF (→ -T)
     suffix: str = KNUT_SUFFIX           # family name tail (stripped for target name)
+    # Scanner family (#100) extensions: an engine-built preset carries the full
+    # ChromIQ layout-engine recipe (LayoutRecipe.to_dict()); selecting it turns
+    # the engine on and seeds the layout panel instead of the printtarg widgets.
+    layout_recipe: dict | None = None   # engine recipe → engine-built preset
+    group: str = ""                     # dropdown/overlay group ("" → by instrument)
 
     @property
     def key(self) -> str:
         return f"__chromiq_knut_{self.slug}__"
 
     @property
+    def display_group(self) -> str:
+        """Group header in the dropdown + overlay — an explicit family group
+        ("Scanner") or, classically, the instrument the chart targets."""
+        return self.group or ("i1Pro" if self.instrument == _KNUT_I1
+                              else "ColorMunki")
+
+    @property
     def combo_label(self) -> str:
-        instr = "i1Pro" if self.instrument == _KNUT_I1 else "ColorMunki"
-        return f"★  {instr} · {self.name}  ·  built-in"
+        return f"★  {self.display_group} · {self.name}  ·  built-in"
 
     @property
     def overlay_label(self) -> str:
-        return self.name  # the overlay already groups by instrument
+        return self.name  # the overlay already groups by instrument / family
 
     @property
     def default_target_name(self) -> str:
-        instr = "i1Pro" if self.instrument == _KNUT_I1 else "ColorMunki"
-        return _sortable_builtin_name(instr, self.name, self.suffix)
+        return _sortable_builtin_name(self.display_group, self.name, self.suffix)
 
 
 # Named printtarg page sizes in mm (only those the presets use); custom sizes are
@@ -222,6 +312,40 @@ def _paper_area_mm2(paper: str) -> float:
         except ValueError:
             return 0.0
     return 0.0
+
+
+# Instrument flag → margin-threshold label (must match settings_dialog
+# _MARGIN_INSTRUMENTS and core.settings seed keys).
+_MARGIN_INSTR_LABEL = {
+    "i1": "i1Pro", "p3": "i1Pro 3+", "CM": "ColorMunki",
+    "SS": "SpectroScan", "isis": "i1iSis",
+}
+
+# Canonical sheet name keyed by sorted (short, long) mm, rounded — so any paper
+# code (named, "WxH", or rotated) resolves to one threshold-combo paper name.
+# Orientation is carried separately, so Tabloid/Ledger (same sheet) share "Tabloid".
+_CANON_PAPER_BY_DIMS = {
+    (210.0, 297.0): "A4",
+    (215.9, 279.4): "Letter",
+    (215.9, 355.6): "Legal",
+    (297.0, 420.0): "A3",
+    (329.0, 483.0): "A3+",
+    (420.0, 594.0): "A2",
+    (279.4, 431.8): "Tabloid",
+}
+
+
+def _canonical_paper_name(w_mm: float, h_mm: float) -> str | None:
+    """Best-effort canonical sheet name from page dimensions (mm), or None.
+
+    Tolerant to ~2 mm so a measured TIFF page (px → mm) still matches the named
+    size. Returns None for unknown sizes (→ no thresholds for that combo)."""
+    lo, hi = sorted((w_mm, h_mm))
+    for (clo, chi), name in _CANON_PAPER_BY_DIMS.items():
+        if abs(lo - clo) <= 2.5 and abs(hi - chi) <= 2.5:
+            return name
+    return None
+
 
 def _paper_sort_key(paper: str) -> float:
     """Ordering key for "smallest sheet first".
@@ -302,6 +426,45 @@ KNUT_PRESETS: list[_Ti1Preset] = [
     _Ti1Preset("fls_i1pro_a4_924p_2pages_portrait_nature_focus", "A4-924p-2pages-Portrait-w7.5mm-Nature Focus" + KNUT_FLS_SUFFIX,
                _KNUT_I1, "A4", 0.98, 10, 2,
                ti1_asset=f"{_KNUT_FLS_DIR}/fls_i1pro_a4_924p_2pages_portrait_nature_focus/chart.ti1", patches=924, white=9, black=8, no_strip_limit=False, suppress_left_clip=False, tiff_16bit=False, suffix=KNUT_FLS_SUFFIX),
+
+    # Scanner family (#100) — Knut's flatbed-scanner printer-profiling charts.
+    # Engine-built (the layout_recipe drives the ChromIQ layout engine, not
+    # printtarg): a dense 4 mm SpectroScan-style grid, printed without colour
+    # management, scanned on a flatbed, then read via Tools → "Build scanner or
+    # camera profile" with "Profile my printer from this scan". The recipes are
+    # Knut's exported presets verbatim (only the paper differs between the two).
+    # Knut's #107 refresh FILE said "Portrait", but both charts are laid out
+    # on rotated (landscape) sheets — the name stays truthful (Basti).
+    _Ti1Preset("scanner_a4_3430p_1page_landscape",
+               "A4-3430p-1page-Landscape-w4.0mm" + KNUT_SCANNER_SUFFIX,
+               "SS", "A4R", 1.0, 4, 1,
+               ti1_asset=f"{_KNUT_SCANNER_DIR}/a4/chart.ti1", patches=3430,
+               white=2, black=2, tiff_16bit=False, suffix=KNUT_SCANNER_SUFFIX,
+               group="Scanner",
+               layout_recipe=dict(_KNUT_SCANNER_RECIPE, paper="A4R")),
+    _Ti1Preset("scanner_letter_3250p_1page_landscape",
+               "Letter-3250p-1page-Landscape-w4.0mm" + KNUT_SCANNER_SUFFIX,
+               "SS", "LetterR", 1.0, 4, 1,
+               ti1_asset=f"{_KNUT_SCANNER_DIR}/letter/chart.ti1", patches=3250,
+               white=2, black=2, tiff_16bit=False, suffix=KNUT_SCANNER_SUFFIX,
+               group="Scanner",
+               layout_recipe=dict(_KNUT_SCANNER_RECIPE, paper="LetterR")),
+    # Two-page variants (Knut, #108): the same 4 mm scanner layout with a
+    # denser patch set spread over two sheets.
+    _Ti1Preset("scanner_a4_6860p_2pages_landscape",
+               "A4-6860p-2pages-Landscape-w4.0mm" + KNUT_SCANNER_SUFFIX,
+               "SS", "A4R", 1.0, 4, 2,
+               ti1_asset=f"{_KNUT_SCANNER_DIR}/a4_2page/chart.ti1", patches=6860,
+               white=3, black=3, tiff_16bit=False, suffix=KNUT_SCANNER_SUFFIX,
+               group="Scanner",
+               layout_recipe=dict(_KNUT_SCANNER_RECIPE, paper="A4R")),
+    _Ti1Preset("scanner_letter_6500p_2pages_landscape",
+               "Letter-6500p-2pages-Landscape-w4.0mm" + KNUT_SCANNER_SUFFIX,
+               "SS", "LetterR", 1.0, 4, 2,
+               ti1_asset=f"{_KNUT_SCANNER_DIR}/letter_2page/chart.ti1", patches=6500,
+               white=3, black=3, tiff_16bit=False, suffix=KNUT_SCANNER_SUFFIX,
+               group="Scanner",
+               layout_recipe=dict(_KNUT_SCANNER_RECIPE, paper="LetterR")),
 ]
 KNUT_PRESETS_BY_KEY: dict[str, _Ti1Preset] = {p.key: p for p in KNUT_PRESETS}
 KNUT_PRESET_KEYS = frozenset(KNUT_PRESETS_BY_KEY)
@@ -318,9 +481,9 @@ KNUT_PRESET_KEYS = frozenset(KNUT_PRESETS_BY_KEY)
 # fallback; no shipped family relies on it any more).
 def _recipe_display_key(p: "_Ti1Preset") -> str:
     """The name a preset's recipe is filed under in a shared recipes.json —
-    instrument label + the preset's name without its family suffix."""
-    instr = "i1Pro" if p.instrument == _KNUT_I1 else "ColorMunki"
-    return f"{instr} {p.name.replace(p.suffix, '').strip()}"
+    group label (instrument, or "Scanner" for that family, #107) + the
+    preset's name without its family suffix."""
+    return f"{p.display_group} {p.name.replace(p.suffix, '').strip()}"
 
 
 def _load_shared_wg_recipes() -> dict:
@@ -396,9 +559,9 @@ BUILTIN_PRESET_LABELS = frozenset({
 # the same paper keep their registry order (e.g. 2-page before 3-page).
 _KNUT_GROUP_ENTRIES = {
     grp: [(p.combo_label, p.overlay_label, p.key)
-          for p in sorted((q for q in KNUT_PRESETS if q.instrument == instr),
+          for p in sorted((q for q in KNUT_PRESETS if q.display_group == grp),
                           key=lambda q: _paper_sort_key(q.paper))]
-    for grp, instr in (("ColorMunki", _KNUT_CM), ("i1Pro", _KNUT_I1))
+    for grp in ("ColorMunki", "i1Pro", "Scanner")
 }
 BUILTIN_PRESET_GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
     ("ColorMunki", [
@@ -418,27 +581,20 @@ BUILTIN_PRESET_GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
         (EXT1944_LETTER_PRESET_LABEL, "Letter-1944p-3pages extended target by Pharmacist", EXT1944_LETTER_PRESET_KEY),
         *_KNUT_GROUP_ENTRIES["i1Pro"],
     ]),
+    # Scanner family (#100): engine-built charts for flatbed-scanner printer
+    # profiling — its own group, since no spectrophotometer is involved.
+    ("Scanner", [
+        *_KNUT_GROUP_ENTRIES["Scanner"],
+    ]),
 ]
 
 
-def _builtin_ti1_asset(key: str) -> str | None:
-    """Asset path of a built-in preset's bundled .ti1, or None. Mirrors
-    ChromIQ's ``TabChart._builtin_ti1_asset`` (minus the targen-based
-    ColorMunki built-ins, which chromiq-patches doesn't ship)."""
-    if key == TC918_PRESET_KEY:
-        return TC918_TI1_ASSET
-    if key in KNUT_PRESETS_BY_KEY:
-        return KNUT_PRESETS_BY_KEY[key].ti1_asset
-    if key in PREBUILT_PRESETS:
-        return PREBUILT_PRESETS[key][0] + ".ti1"
-    return None
-
-
 def comparable_presets(settings) -> list[tuple[str, list[tuple[str, "Path"]]]]:
-    """Presets whose patch set exists on disk, grouped for the "Compare with"
-    dropdown: ``[(group, [(label, .ti1 path), …]), …]`` — built-in presets by
-    instrument plus a "Custom presets" group for user presets that bundled a
-    .ti1. Re-read on each call. Same contract as ChromIQ's version."""
+    """Presets whose patch set exists on disk, grouped for the #66 "Compare with
+    profile" dropdown: ``[(group, [(label, .ti1 path), …]), …]`` — built-in
+    presets by instrument plus a "Custom presets" group for user presets that
+    bundled a .ti1. Re-read on each call (newly saved / deleted presets appear or
+    disappear by themselves). Shared by the Tools 3D viewer and the TI2 editor."""
     groups: list[tuple[str, list[tuple[str, Path]]]] = []
     for instr, entries in BUILTIN_PRESET_GROUPS:
         items: list[tuple[str, Path]] = []
@@ -459,3 +615,22 @@ def comparable_presets(settings) -> list[tuple[str, list[tuple[str, "Path"]]]]:
     if custom:
         groups.append((tr("Custom presets"), custom))
     return groups
+
+
+
+
+# ---- shim-owned: module-level .ti1 asset lookup (upstream keeps this on
+# the TabChart widget class, which the standalone does not ship) ----------
+def _builtin_ti1_asset(key: str) -> str | None:
+    """Asset path of a built-in preset's bundled .ti1, or None. Mirrors
+    ChromIQ's ``TabChart._builtin_ti1_asset`` (minus the targen-based
+    ColorMunki built-ins, which chromiq-patches doesn't ship)."""
+    if key == TC918_PRESET_KEY:
+        return TC918_TI1_ASSET
+    if key in KNUT_PRESETS_BY_KEY:
+        return KNUT_PRESETS_BY_KEY[key].ti1_asset
+    if key in PREBUILT_PRESETS:
+        return PREBUILT_PRESETS[key][0] + ".ti1"
+    return None
+
+
