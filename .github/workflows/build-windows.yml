@@ -108,7 +108,9 @@ jobs:
               printf 'Extract it, open the ChromIQPatches folder, and run ChromIQPatches.exe. '
               printf 'Windows SmartScreen may warn on first launch — '
               printf 'click "More info" → "Run anyway". '
-              printf 'ArgyllCMS is NOT required.'
+              printf 'ArgyllCMS is NOT required.\n\n'
+              printf '---\n☕ ChromIQ Patches is free and always will be — if it saves you time, a coffee is a kind way to say thanks. Completely optional, and the app stays fully featured either way.\n\n'
+              printf '[![Support ChromIQ Patches on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/itsab1989)\n'
             } > /tmp/release_notes.txt
             gh release create "$TAG" \
               --title "ChromIQ Patches $TAG" \

@@ -312,7 +312,9 @@ jobs:
               printf 'ChromIQ Patches is ad-hoc signed (not notarized). On macOS Sonoma+ the right-click → Open trick often fails with *"Apple cannot check it for malicious software."* If that happens, remove the quarantine flag in Terminal:\n\n'
               printf '```\nxattr -dr com.apple.quarantine /Applications/ChromIQPatches.app\n```\n\n'
               printf 'Then double-click as normal.\n\n'
-              printf 'Requires macOS 12+. ArgyllCMS is NOT required.'
+              printf 'Requires macOS 12+. ArgyllCMS is NOT required.\n\n'
+              printf '---\n☕ ChromIQ Patches is free and always will be — if it saves you time, a coffee is a kind way to say thanks. Completely optional, and the app stays fully featured either way.\n\n'
+              printf '[![Support ChromIQ Patches on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/itsab1989)\n'
             } > /tmp/release_notes.txt
             # The matrix legs race to create the release — treat "already
             # exists" from the loser as success so its upload still runs.

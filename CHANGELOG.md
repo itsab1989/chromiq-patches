@@ -1,5 +1,9 @@
 # Changelog
 
+<p align="center">
+  <a href="https://ko-fi.com/itsab1989"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support ChromIQ Patches on Ko-fi" height="36"></a>
+</p>
+
 ## v1.2.1
 
 - Colour extremes generator: the "per end" maximum is raised from 100 to

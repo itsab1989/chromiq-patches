@@ -108,7 +108,9 @@ jobs:
               printf '**Installation (Linux):** Download the tarball for your architecture '
               printf '(x86_64 for most desktops/laptops, aarch64 for ARM systems). '
               printf 'Extract with `tar xzf ChromIQPatches-Linux-*.tar.gz`, then run '
-              printf '`./ChromIQPatches/ChromIQPatches`. ArgyllCMS is NOT required.'
+              printf '`./ChromIQPatches/ChromIQPatches`. ArgyllCMS is NOT required.\n\n'
+              printf '---\n☕ ChromIQ Patches is free and always will be — if it saves you time, a coffee is a kind way to say thanks. Completely optional, and the app stays fully featured either way.\n\n'
+              printf '[![Support ChromIQ Patches on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/itsab1989)\n'
             } > /tmp/release_notes.txt
             gh release create "$TAG" \
               --title "ChromIQ Patches $TAG" \
